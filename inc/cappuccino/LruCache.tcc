@@ -258,10 +258,10 @@ template <typename KeyType, typename ValueType>
 auto LruCache<KeyType, ValueType>::CleanExpiredValues() -> size_t
 {
     size_t start_size = m_ttl_list.size();
+    auto now = std::chrono::steady_clock::now();
 
     {
         std::lock_guard guard { m_lock };
-        auto now = std::chrono::steady_clock::now();
 
         // Loop through and delete all items that are expired.
         while (!m_ttl_list.empty() && now >= m_ttl_list.begin()->first) {
