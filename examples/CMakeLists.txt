@@ -16,3 +16,17 @@ set(LRU_BENCH_SOURCE_FILES
 )
 add_executable(lru_bench ${LRU_BENCH_SOURCE_FILES})
 target_link_libraries(lru_bench PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+
+### lru_uniform_ttl_simple ###
+set(LRU_UNIFORM_TTL_SIMPLE_SOURCE_FILES
+    examples/lru_uniform_ttl_simple.cpp
+    )
+add_executable(lru_uniform_ttl_simple ${LRU_UNIFORM_TTL_SIMPLE_SOURCE_FILES})
+target_link_libraries(lru_uniform_ttl_simple PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+
+### lru_uniform_ttl_bench ###
+set(LRU_UNIFORM_TTL_BENCH_SOURCE_FILES
+    examples/lru_uniform_ttl_bench.cpp
+    )
+add_executable(lru_uniform_ttl_bench ${LRU_UNIFORM_TTL_BENCH_SOURCE_FILES})
+target_link_libraries(lru_uniform_ttl_bench PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})

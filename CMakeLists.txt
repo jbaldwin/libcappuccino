@@ -8,6 +8,7 @@ set(CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES pthread)
 set(SOURCE_FILES
     inc/cappuccino/Cappuccino.h src/Cappuccino.cpp
     inc/cappuccino/LruCache.h inc/cappuccino/LruCache.tcc
+    inc/cappuccino/LruCacheUniformTtl.h inc/cappuccino/LruCacheUniformTtl.tcc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
