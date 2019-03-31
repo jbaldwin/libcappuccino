@@ -1,4 +1,4 @@
 #pragma once
 
-#include "cappuccino/LruCache.h"
-#include "cappuccino/LruCacheUniformTtl.h"
+#include "cappuccino/TlruCache.h"
+#include "cappuccino/UtlruCache.h"

@@ -1,8 +1,9 @@
 #pragma once
 
+#include "cappuccino/SyncImplEnum.h"
+
 #include <chrono>
 #include <list>
-#include <map>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
@@ -10,59 +11,66 @@
 
 namespace cappuccino {
 
-template <typename KeyType, typename ValueType>
-class LruCache {
+/**
+ * Uniform time aware LRU (Least Recently Used) Cache.
+ * Each key value pair is evicted based on a global cache TTL (time to live)
+ * and least recently used policy.  Expired key value pairs are evicted before
+ * least recently used.  This cache differs from TlruCache in that it is more
+ * efficient in managing the TTLs since they are uniform for all key value pairs
+ * in the cache, rather than tracking items individually.
+ *
+ * This cache is sync aware and can be used concurrently from multiple threads safely.
+ */
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
+class UtlruCache {
 public:
     struct KeyValue {
         KeyValue(
-            std::chrono::seconds ttl,
             KeyType key,
             ValueType value)
-            : m_ttl(ttl)
-            , m_key(std::move(key))
+            : m_key(std::move(key))
             , m_value(std::move(value))
         {
         }
 
-        std::chrono::seconds m_ttl;
         KeyType m_key;
         ValueType m_value;
     };
 
     /**
+     * @param ttl The uniform TTL of every key value inserted into the cache.
      * @param capacity The maximum number of key value pairs allowed in the cache.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit LruCache(
+    UtlruCache(
+        std::chrono::seconds ttl,
         size_t capacity,
         float max_load_factor = 1.0f);
 
     /**
-     * Inserts or updates the given key value pair with the new TTL.
-     * @param ttl The TTL for this key value pair.
+     * Inserts or updates the given key value pair.  On update will reset the TTL.
      * @param key The key to store the value under.
      * @param value The value of data to store.
      */
     auto Insert(
-        std::chrono::seconds ttl,
         const KeyType& key,
         ValueType value) -> void;
 
     /**
-     * Inserts or updates a range of key values pairs with their given TTL.  This expects a container
-     * that has 3 values in the {std::chrono::seconds, KeyType, ValueType} ordering.
-     * There is a simple struct provided on the LruCache::KeyValue that can be put into
-     * any iterable container to satisfy this requirement.
-     * @tparam RangeType A container with three items, std::chrono::seconds, KeyType, ValueType.
+     * Inserts or updates a range of key value pairs.  This expects a container that has
+     * 2 values in the {KeyType, ValueType} ordering.  There is a simple struct
+     * LruCacheUniformTtl::KeyValue that can be put into any iterable container to satisfy
+     * this requirement.
+     * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
      * @{
      */
     template <template <class...> typename RangeType>
     auto InsertRange(
         RangeType<KeyValue> key_value_range) -> void;
-    template <template <class...> typename RangeType, template <class, class, class> typename TupleType>
+    template <template <class...> typename RangeType, template <class, class> typename PairType>
     auto InsertRange(
-        RangeType<TupleType<std::chrono::seconds, KeyValue, ValueType>> key_value_range) -> void;
+        RangeType<PairType<KeyType, ValueType>> key_value_range) -> void;
     /** @} */
 
     /**
@@ -75,7 +83,7 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g. vector<k> or set<k>.
+     * @tparam RangeType A container with the set of keys  to delete, e.g. vector<k> or set<k>.
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
@@ -92,23 +100,23 @@ public:
         const KeyType& key) -> std::optional<ValueType>;
 
     /**
-     * Attempts to find all the given keys values.
+     * Attempts to find all given keys values.
      *
-     * The user should initialize this container with the keys to lookup with the values as all
+     * The user should initialize this container with the keys to lookup with the values all
      * empty optionals.  The keys that are found will have the optionals filled in with the
      * appropriate values from the cache.
      *
      * @tparam RangeType A container with a pair of optional items,
-     *                   e.g. vector<pair<k, optional<v>>>, or map<k, optional<v>>.
+     *                   e.g. vector<pair<k, optional<v>>> or map<k, optional<v>>.
      * @param key_optional_value_range The keys to optional values to fill out.
      * @{
      */
-    template <template <class, class...> typename RangeType>
+    template <template <class...> typename RangeType>
     auto FindRange(
-        RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void;
+        RangeType<KeyValue>& key_optional_value_range) -> void;
     template <template <class...> typename RangeType, template <class, class> typename PairType>
     auto FindRange(
-        RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void;
+        RangeType<PairType<KeyType, ValueType>>& key_optional_value_range) -> void;
     /** @} */
 
     /**
@@ -130,14 +138,14 @@ public:
 
 private:
     struct Element {
-        /// The point in time in which this element's value expires.
+        /// The point in time in  which this element's value expires.
         std::chrono::steady_clock::time_point m_expire_time;
         /// The iterator into the keyed data structure.
         typename std::unordered_map<KeyType, size_t>::iterator m_keyed_position;
         /// The iterator into the lru data structure.
         std::list<size_t>::iterator m_lru_position;
         /// The iterator into the ttl data structure.
-        std::map<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
+        std::list<size_t>::iterator m_ttl_position;
         /// The element's value.
         ValueType m_value;
     };
@@ -174,29 +182,20 @@ private:
     /// Cache lock for all mutations.
     std::mutex m_lock;
 
-    /// The current number of elements in the cache.
+    /// The uniform TTL for every key value pair inserted into the cache.
+    std::chrono::seconds m_ttl;
+
     size_t m_used_size { 0 };
 
-    /// The main store for the key value pairs and metadata for each element.
     std::vector<Element> m_elements;
 
-    /// The keyed lookup data structure, the value is the index into 'm_elements'.
     std::unordered_map<KeyType, size_t> m_keyed_elements;
-    /// The lru sorted list, the value is the index into 'm_elements'.
     std::list<size_t> m_lru_list;
-    /// The ttl sorted list, the value is the index into 'm_elements'.
-    std::map<std::chrono::steady_clock::time_point, size_t> m_ttl_list;
+    std::list<size_t> m_ttl_list;
 
-    /**
-     * The current end of the lru list.  This list is special in that it is pre-allocated
-     * for the capacity of the entire size of 'm_elements' and this iterator is used
-     * to denote how many items are in use.  Each item in this list is pre-assigned an index
-     * into 'm_elements' and never has that index changed, this is how open slots into
-     * 'm_elements' are determined when inserting a new Element.
-     */
     std::list<size_t>::iterator m_lru_end;
 };
 
 } // namespace cappuccino
 
-#include "cappuccino/LruCache.tcc"
+#include "cappuccino/UtlruCache.tcc"

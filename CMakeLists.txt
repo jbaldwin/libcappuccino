@@ -7,12 +7,14 @@ set(CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES pthread)
 
 set(SOURCE_FILES
     inc/cappuccino/Cappuccino.h src/Cappuccino.cpp
-    inc/cappuccino/LruCache.h inc/cappuccino/LruCache.tcc
-    inc/cappuccino/LruCacheUniformTtl.h inc/cappuccino/LruCacheUniformTtl.tcc
+    inc/cappuccino/LockScopeGuard.h
+    inc/cappuccino/SyncImplEnum.h
+    inc/cappuccino/TlruCache.h inc/cappuccino/TlruCache.tcc
+    inc/cappuccino/UtlruCache.h inc/cappuccino/UtlruCache.tcc
 )
 
 add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
-target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 

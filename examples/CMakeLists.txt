@@ -3,30 +3,29 @@ project(cappuccino_examples CXX)
 
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/bin)
 
-### lru_simple ###
-set(LRU_SIMPLE_SOURCE_FILES
-    examples/lru_simple.cpp
+### tlru_simple ###
+project(tlru_simple CXX)
+set(TLRU_SIMPLE_SOURCE_FILES
+    examples/tlru_simple.cpp
 )
-add_executable(lru_simple ${LRU_SIMPLE_SOURCE_FILES})
-target_link_libraries(lru_simple PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+add_executable(${PROJECT_NAME} ${TLRU_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-### lru_bench ###
-set(LRU_BENCH_SOURCE_FILES
-    examples/lru_bench.cpp
+### utlru_simple ###
+project(utlru_simple CXX)
+set(UTLRU_SIMPLE_SOURCE_FILES
+    examples/utlru_simple.cpp
 )
-add_executable(lru_bench ${LRU_BENCH_SOURCE_FILES})
-target_link_libraries(lru_bench PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+add_executable(${PROJECT_NAME} ${UTLRU_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
-### lru_uniform_ttl_simple ###
-set(LRU_UNIFORM_TTL_SIMPLE_SOURCE_FILES
-    examples/lru_uniform_ttl_simple.cpp
-    )
-add_executable(lru_uniform_ttl_simple ${LRU_UNIFORM_TTL_SIMPLE_SOURCE_FILES})
-target_link_libraries(lru_uniform_ttl_simple PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-
-### lru_uniform_ttl_bench ###
-set(LRU_UNIFORM_TTL_BENCH_SOURCE_FILES
-    examples/lru_uniform_ttl_bench.cpp
-    )
-add_executable(lru_uniform_ttl_bench ${LRU_UNIFORM_TTL_BENCH_SOURCE_FILES})
-target_link_libraries(lru_uniform_ttl_bench PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+### bench ###
+project(bench CXX)
+set(TLRU_BENCH_SOURCE_FILES
+    examples/bench.cpp
+)
+add_executable(${PROJECT_NAME} ${TLRU_BENCH_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)

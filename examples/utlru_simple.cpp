@@ -3,16 +3,18 @@
 #include <chrono>
 #include <iostream>
 
+using namespace cappuccino;
+
 int main(int argc, char* argv[])
 {
     using namespace std::chrono_literals;
 
     // Create a cache with 2 items.
-    cappuccino::LruCache<uint64_t, std::string> lru_cache { 2 };
+    UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
 
     // Insert hello and world.
-    lru_cache.Insert(1h, 1, "Hello");
-    lru_cache.Insert(1h, 2, "World");
+    lru_cache.Insert(1, "Hello");
+    lru_cache.Insert(2, "World");
 
     // Grab them
     auto hello = lru_cache.Find(1);
@@ -22,7 +24,7 @@ int main(int argc, char* argv[])
     std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
 
     // Insert hola, this will replace "Hello" since its the oldest lru item (nothing has expired).
-    lru_cache.Insert(1h, 3, "Hola");
+    lru_cache.Insert(3, "Hola");
 
     auto hola = lru_cache.Find(3);
     hello = lru_cache.Find(1); // this will return an empty optional now
