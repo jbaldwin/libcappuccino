@@ -176,7 +176,7 @@ private:
         std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
 
     auto doAccess(
-        size_t element_idx) -> void;
+        Element& element) -> void;
 
     auto doPrune(
         std::chrono::steady_clock::time_point now) -> void;

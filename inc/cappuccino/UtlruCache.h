@@ -24,6 +24,8 @@ namespace cappuccino {
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class UtlruCache {
 public:
+    using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+
     struct KeyValue {
         KeyValue(
             KeyType key,
@@ -116,7 +118,7 @@ public:
         RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void;
     template <template <class...> typename RangeType, template <class, class> typename PairType>
     auto FindRange(
-        RangeType<PairType<KeyType, ValueType>>& key_optional_value_range) -> void;
+        RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void;
     /** @} */
 
     /**
@@ -141,7 +143,7 @@ private:
         /// The point in time in  which this element's value expires.
         std::chrono::steady_clock::time_point m_expire_time;
         /// The iterator into the keyed data structure.
-        typename std::unordered_map<KeyType, size_t>::iterator m_keyed_position;
+        KeyedIterator m_keyed_position;
         /// The iterator into the lru data structure.
         std::list<size_t>::iterator m_lru_position;
         /// The iterator into the ttl data structure.
@@ -162,7 +164,7 @@ private:
         std::chrono::steady_clock::time_point expire_time) -> void;
 
     auto doUpdate(
-        typename std::unordered_map<KeyType, size_t>::iterator keyed_position,
+        KeyedIterator keyed_position,
         ValueType&& value,
         std::chrono::steady_clock::time_point expire_time) -> void;
 
@@ -174,7 +176,7 @@ private:
         std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
 
     auto doAccess(
-        size_t element_idx) -> void;
+        Element& element) -> void;
 
     auto doPrune(
         std::chrono::steady_clock::time_point now) -> void;

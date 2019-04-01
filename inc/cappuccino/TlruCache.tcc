@@ -14,7 +14,6 @@ TlruCache<KeyType, ValueType, SyncType>::TlruCache(
     , m_lru_list(capacity)
 {
     std::iota(m_lru_list.begin(), m_lru_list.end(), 0);
-
     m_lru_end = m_lru_list.begin();
 
     m_keyed_elements.max_load_factor(max_load_factor);
@@ -185,19 +184,18 @@ auto TlruCache<KeyType, ValueType, SyncType>::doInsert(
     ValueType&& value,
     std::chrono::steady_clock::time_point expire_time) -> void
 {
-    auto lru_position = m_lru_end;
-    auto element_idx = *lru_position;
+    auto element_idx = *m_lru_end;
 
     auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
 
     // Insert the element_idx into the TTL list.
-    auto ttl_position = m_ttl_list.insert({ expire_time, element_idx });
+    auto ttl_position = m_ttl_list.emplace(expire_time, element_idx);
 
     // Update the element's appropriate fields across the datastructures.
     Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
     element.m_expire_time = expire_time;
-    element.m_lru_position = lru_position;
+    element.m_lru_position = m_lru_end;
     element.m_ttl_position = ttl_position;
     element.m_keyed_position = keyed_position;
 
@@ -205,6 +203,8 @@ auto TlruCache<KeyType, ValueType, SyncType>::doInsert(
     ++m_lru_end;
 
     ++m_used_size;
+
+    doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -215,14 +215,14 @@ auto TlruCache<KeyType, ValueType, SyncType>::doUpdate(
 {
     size_t element_idx = keyed_position->second;
 
-    doAccess(element_idx);
-
     Element& element = m_elements[element_idx];
     element.m_expire_time = expire_time;
 
     // Reinsert into TTL list with the new TTL.
     m_ttl_list.erase(element.m_ttl_position);
-    element.m_ttl_position = m_ttl_list.insert({ expire_time, element_idx });
+    element.m_ttl_position = m_ttl_list.emplace(expire_time, element_idx);
+
+    doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -258,7 +258,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::doFind(
 
         // Has the element TTL'ed?
         if (now < element.m_expire_time) {
-            doAccess(element_idx);
+            doAccess(element);
             return { element.m_value };
         } else {
             // Its dead anyways, lets delete it now.
@@ -271,10 +271,9 @@ auto TlruCache<KeyType, ValueType, SyncType>::doFind(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::doAccess(
-    size_t element_idx) -> void
+    Element& element) -> void
 {
     // This function will put the item at the most recently used side of the LRU list.
-    Element& element = m_elements[element_idx];
     m_lru_list.splice(m_lru_list.begin(), m_lru_list, element.m_lru_position);
 }
 

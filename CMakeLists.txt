@@ -8,6 +8,7 @@ set(CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES pthread)
 set(SOURCE_FILES
     inc/cappuccino/Cappuccino.h src/Cappuccino.cpp
     inc/cappuccino/LockScopeGuard.h
+    inc/cappuccino/LruCache.h inc/cappuccino/LruCache.tcc
     inc/cappuccino/SyncImplEnum.h
     inc/cappuccino/TlruCache.h inc/cappuccino/TlruCache.tcc
     inc/cappuccino/UtlruCache.h inc/cappuccino/UtlruCache.tcc

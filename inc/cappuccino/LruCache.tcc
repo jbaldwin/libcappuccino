@@ -1,17 +1,15 @@
 #include "cappuccino/LockScopeGuard.h"
-#include "cappuccino/UtlruCache.h"
+#include "cappuccino/LruCache.h"
 
 #include <numeric>
 
 namespace cappuccino {
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-UtlruCache<KeyType, ValueType, SyncType>::UtlruCache(
-    std::chrono::seconds ttl,
+LruCache<KeyType, ValueType, SyncType>::LruCache(
     size_t capacity,
     float max_load_factor)
-    : m_ttl(ttl)
-    , m_elements(capacity)
+    : m_elements(capacity)
     , m_keyed_elements(capacity)
     , m_lru_list(capacity)
 {
@@ -23,47 +21,36 @@ UtlruCache<KeyType, ValueType, SyncType>::UtlruCache(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::Insert(
-    const KeyType& key,
-    ValueType value) -> void
+auto LruCache<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-    auto expire_time = now + m_ttl;
-
     LockScopeGuard<SyncType> guard { m_lock };
-    doInsertUpdate(key, std::move(value), now, expire_time);
+    doInsertUpdate(key, std::move(value));
 };
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
-auto UtlruCache<KeyType, ValueType, SyncType>::InsertRange(
+auto LruCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType<KeyValue> key_value_range) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-    auto expire_time = now + m_ttl;
-
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, value] : key_value_range) {
-        doInsertUpdate(key, std::move(value), now, expire_time);
+        doInsertUpdate(key, std::move(value));
     }
 };
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType, template <class, class> typename PairType>
-auto UtlruCache<KeyType, ValueType, SyncType>::InsertRange(
+auto LruCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType<PairType<KeyType, ValueType>> key_value_range) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-    auto expire_time = now + m_ttl;
-
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, value] : key_value_range) {
-        doInsertUpdate(key, std::move(value), now, expire_time);
+        doInsertUpdate(key, std::move(value));
     }
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::Delete(
+auto LruCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
     LockScopeGuard<SyncType> guard { m_lock };
@@ -74,17 +61,16 @@ auto UtlruCache<KeyType, ValueType, SyncType>::Delete(
     } else {
         return false;
     }
-};
+}
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
-auto UtlruCache<KeyType, ValueType, SyncType>::DeleteRange(
+auto LruCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
 {
     size_t deleted_elements { 0 };
 
     LockScopeGuard<SyncType> guard { m_lock };
-
     for (auto& key : key_range) {
         auto keyed_position = m_keyed_elements.find(key);
         if (keyed_position != m_keyed_elements.end()) {
@@ -94,146 +80,101 @@ auto UtlruCache<KeyType, ValueType, SyncType>::DeleteRange(
     }
 
     return deleted_elements;
-};
+}
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key) -> std::optional<ValueType>
+auto LruCache<KeyType, ValueType, SyncType>::Find(const KeyType& key) -> std::optional<ValueType>
 {
-    auto now = std::chrono::steady_clock::now();
-
     LockScopeGuard<SyncType> guard { m_lock };
-    return doFind(key, now);
+    return doFind(key);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
-auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
+auto LruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-
     LockScopeGuard<SyncType> guard { m_lock };
-
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key, now);
+        optional_value = doFind(key);
     }
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType, template <class, class> typename PairType>
-auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
+auto LruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void
 {
-    auto now = std::chrono::steady_clock::now();
-
     LockScopeGuard<SyncType> guard { m_lock };
-
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key, now);
+        optional_value = doFind(key);
     }
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
+auto LruCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
     return m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
+auto LruCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
 {
     return m_elements.size();
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::CleanExpiredValues() -> size_t
-{
-    // how to determine when to stop cleaning since ttl list doesn't empty?
-
-    size_t deleted_elements { 0 };
-    auto now = std::chrono::steady_clock::now();
-
-    {
-        LockScopeGuard<SyncType> guard { m_lock };
-
-        while (m_used_size > 0) {
-            Element& element = m_elements[m_ttl_list.begin()];
-            if (now >= element.m_expire_time) {
-                ++deleted_elements;
-                doDelete(m_ttl_list.begin());
-            } else {
-                break;
-            }
-        }
-    }
-
-    return deleted_elements;
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
+auto LruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point now,
-    std::chrono::steady_clock::time_point expire_time) -> void
+    ValueType&& value) -> void
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        doUpdate(keyed_position, std::move(value), expire_time);
+        doUpdate(keyed_position, std::move(value));
     } else {
-        if (m_used_size >= m_elements.size()) {
-            doPrune(now);
-        }
-        doInsert(key, std::move(value), expire_time);
+        doInsert(key, std::move(value));
     }
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doInsert(
+auto LruCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point expire_time) -> void
+    ValueType&& value) -> void
 {
+    if (m_used_size >= m_elements.size()) {
+        doPrune();
+    }
+
     auto element_idx = *m_lru_end;
 
     auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
 
-    m_ttl_list.emplace_back(element_idx);
-
     Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
-    element.m_expire_time = expire_time;
     element.m_lru_position = m_lru_end;
-    element.m_ttl_position = std::prev(m_ttl_list.end());
     element.m_keyed_position = keyed_position;
 
     ++m_lru_end;
 
     ++m_used_size;
 
+    // This is the most recently used item, put it in the appropriate place.
     doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doUpdate(
+auto LruCache<KeyType, ValueType, SyncType>::doUpdate(
     KeyedIterator keyed_position,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point expire_time) -> void
+    ValueType&& value) -> void
 {
-    size_t element_idx = keyed_position->second;
-
-    Element& element = m_elements[element_idx];
-    element.m_expire_time = expire_time;
-
-    // push to the end of the ttl list
-    m_ttl_list.splice(m_ttl_list.end(), m_ttl_list, element.m_ttl_position);
+    Element& element = m_elements[keyed_position->second];
+    element.m_value = std::move(value);
 
     doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doDelete(
+auto LruCache<KeyType, ValueType, SyncType>::doDelete(
     size_t element_idx) -> void
 {
     Element& element = m_elements[element_idx];
@@ -243,56 +184,38 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doDelete(
     }
     --m_lru_end;
 
-    m_ttl_list.erase(element.m_ttl_position);
-
     m_keyed_elements.erase(element.m_keyed_position);
 
     --m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doFind(
-    const KeyType& key,
-    std::chrono::steady_clock::time_point now) -> std::optional<ValueType>
+auto LruCache<KeyType, ValueType, SyncType>::doFind(
+    const KeyType& key) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         size_t element_idx = keyed_position->second;
         Element& element = m_elements[element_idx];
-
-        // Has the element TTL'ed?
-        if (now < element.m_expire_time) {
-            doAccess(element);
-            return { element.m_value };
-        } else {
-            doDelete(element_idx);
-        }
+        return { element.m_value };
     }
 
     return {};
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doAccess(
+auto LruCache<KeyType, ValueType, SyncType>::doAccess(
     Element& element) -> void
 {
+    // Put the accessed item at the front of the LRU list.
     m_lru_list.splice(m_lru_list.begin(), m_lru_list, element.m_lru_position);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto UtlruCache<KeyType, ValueType, SyncType>::doPrune(
-    std::chrono::steady_clock::time_point now) -> void
+auto LruCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
     if (m_used_size > 0) {
-        size_t ttl_idx = *m_ttl_list.begin();
-        Element& element = m_elements[ttl_idx];
-
-        if (now >= element.m_expire_time) {
-            doDelete(ttl_idx);
-        } else {
-            size_t lru_idx = m_lru_list.back();
-            doDelete(lru_idx);
-        }
+        doDelete(m_lru_list.back());
     }
 }
 
