@@ -225,6 +225,9 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
     auto func = [&]() mutable -> void {
         size_t worker_iterations = ITERATIONS / WORKER_COUNT;
 
+        std::chrono::milliseconds insert_elapsed { 0 };
+        std::chrono::milliseconds find_elapsed { 0 };
+
         auto start = std::chrono::steady_clock::now();
 
         if constexpr (BatchType == BatchInsertEnum::NO) {
@@ -284,9 +287,44 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
 
         auto stop = std::chrono::steady_clock::now();
 
-        auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start).count();
+        insert_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+        start = std::chrono::steady_clock::now();
+
+        if constexpr (BatchType == BatchInsertEnum::NO) {
+            for (size_t i = 0; i < worker_iterations; ++i) {
+                if constexpr (std::is_same<KeyType, std::string>::value) {
+                    lru_cache.Find(to_string(i));
+                } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
+                    lru_cache.Find(i);
+                } else {
+                    static_assert("invalid type parameters");
+                }
+            }
+        } else {
+
+            std::unordered_map<KeyType, std::optional<ValueType>> data;
+            data.reserve(worker_iterations);
+
+            for (size_t i = 0; i < worker_iterations; ++i) {
+                if constexpr (std::is_same<KeyType, std::string>::value) {
+                    data.emplace(to_string(i), std::optional<ValueType> {});
+                } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
+                    data.emplace(i, std::optional<ValueType> {});
+                } else {
+                    static_assert("invalid type parameters");
+                }
+            }
+
+            lru_cache.FindRange(data);
+        }
+
+        stop = std::chrono::steady_clock::now();
+
+        find_elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
         std::lock_guard guard { cout_lock };
-        std::cout << elapsed << " ";
+        std::cout << "[" << insert_elapsed.count() << ", " << find_elapsed.count() << "] ";
     };
 
     for (size_t i = 0; i < WORKER_COUNT; ++i) {
@@ -306,6 +344,9 @@ int main(int argc, char* argv[])
     constexpr size_t WORKER_COUNT = 12;
     constexpr size_t CACHE_SIZE = 100'000;
 
+    /**
+     * SYNC INDIVIDUAL
+     */
     tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, std::string, SyncImplEnum::SYNC, BatchInsertEnum::NO>(10s);
     utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, std::string, SyncImplEnum::SYNC, BatchInsertEnum::NO>(10s);
     std::cout << "\n";
@@ -322,10 +363,28 @@ int main(int argc, char* argv[])
     utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::SYNC, BatchInsertEnum::NO>(10s);
     std::cout << "\n";
 
+    /**
+     * SYNC BATCH
+     */
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, std::string, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, std::string, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
     tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
     utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
     std::cout << "\n";
 
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::SYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
+    /**
+     * UNSYNC INDIVIDUAL
+     */
     tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::NO>(10s);
     utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::NO>(10s);
     std::cout << "\n";
@@ -342,8 +401,23 @@ int main(int argc, char* argv[])
     utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::NO>(10s);
     std::cout << "\n";
 
+    /**
+     * UNSYNC BATCH
+     */
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
     tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
     utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    std::cout << "\n";
+
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, SyncImplEnum::UNSYNC, BatchInsertEnum::YES>(10s);
     std::cout << "\n";
 
     return 0;

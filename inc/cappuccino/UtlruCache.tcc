@@ -110,7 +110,7 @@ auto UtlruCache<KeyType, ValueType, SyncType>::Find(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
 auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
-    RangeType<KeyValue>& key_optional_value_range) -> void
+    RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void
 {
     auto now = std::chrono::steady_clock::now();
 

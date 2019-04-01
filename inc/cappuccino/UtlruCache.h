@@ -113,7 +113,7 @@ public:
      */
     template <template <class...> typename RangeType>
     auto FindRange(
-        RangeType<KeyValue>& key_optional_value_range) -> void;
+        RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void;
     template <template <class...> typename RangeType, template <class, class> typename PairType>
     auto FindRange(
         RangeType<PairType<KeyType, ValueType>>& key_optional_value_range) -> void;
