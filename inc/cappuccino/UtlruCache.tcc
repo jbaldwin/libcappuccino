@@ -1,5 +1,5 @@
-#include "cappuccino/UtlruCache.h"
 #include "cappuccino/LockScopeGuard.h"
+#include "cappuccino/UtlruCache.h"
 
 #include <numeric>
 
@@ -112,10 +112,12 @@ template <template <class...> typename RangeType>
 auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<KeyValue>& key_optional_value_range) -> void
 {
+    auto now = std::chrono::steady_clock::now();
+
     LockScopeGuard<SyncType> guard { m_lock };
 
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+        optional_value = doFind(key, now);
     }
 }
 
@@ -124,10 +126,12 @@ template <template <class...> typename RangeType, template <class, class> typena
 auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<PairType<KeyType, ValueType>>& key_optional_value_range) -> void
 {
+    auto now = std::chrono::steady_clock::now();
+
     LockScopeGuard<SyncType> guard { m_lock };
 
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+        optional_value = doFind(key, now);
     }
 }
 

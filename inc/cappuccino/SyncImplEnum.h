@@ -2,8 +2,7 @@
 
 namespace cappuccino {
 
-enum class SyncImplEnum
-{
+enum class SyncImplEnum {
     UNSYNC = 0,
     SYNC = 1,
 };

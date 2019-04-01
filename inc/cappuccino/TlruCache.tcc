@@ -1,5 +1,5 @@
-#include "cappuccino/TlruCache.h"
 #include "cappuccino/LockScopeGuard.h"
+#include "cappuccino/TlruCache.h"
 
 #include <numeric>
 
@@ -30,7 +30,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::Insert(
     auto now = std::chrono::steady_clock::now();
     auto expire_time = now + ttl;
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     doInsertUpdate(key, std::move(value), now, expire_time);
 }
 
@@ -41,7 +41,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::InsertRange(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [ttl, key, value] : key_value_range) {
         auto expired_time = now + ttl;
         doInsertUpdate(key, std::move(value), now, expired_time);
@@ -55,7 +55,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::InsertRange(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [ttl, key, value] : key_value_range) {
         auto expired_time = now + ttl;
         doInsertUpdate(key, std::move(value), now, expired_time);
@@ -66,7 +66,7 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         doDelete(keyed_position->second);
@@ -83,7 +83,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::DeleteRange(
 {
     size_t deleted_elements { 0 };
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     for (auto& key : key_range) {
         auto keyed_position = m_keyed_elements.find(key);
         if (keyed_position != m_keyed_elements.end()) {
@@ -101,7 +101,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::Find(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     return doFind(key, now);
 }
 
@@ -110,9 +110,11 @@ template <template <class, class...> typename RangeType>
 auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void
 {
-    LockScopeGuard<SyncType> guard{m_lock};
+    auto now = std::chrono::steady_clock::now();
+
+    LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+        optional_value = doFind(key, now);
     }
 }
 
@@ -121,9 +123,11 @@ template <template <class...> typename RangeType, template <class, class> typena
 auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
     RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void
 {
-    LockScopeGuard<SyncType> guard{m_lock};
+    auto now = std::chrono::steady_clock::now();
+
+    LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+        optional_value = doFind(key, now);
     }
 }
 
@@ -145,7 +149,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::CleanExpiredValues() -> size_t
     size_t start_size = m_ttl_list.size();
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard{m_lock};
+    LockScopeGuard<SyncType> guard { m_lock };
     // Loop through and delete all items that are expired.
     while (m_used_size > 0 && now >= m_ttl_list.begin()->first) {
         doDelete(m_ttl_list.begin()->second);
@@ -218,7 +222,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::doUpdate(
 
     // Reinsert into TTL list with the new TTL.
     m_ttl_list.erase(element.m_ttl_position);
-    element.m_ttl_position = m_ttl_list.insert({expire_time, element_idx});
+    element.m_ttl_position = m_ttl_list.insert({ expire_time, element_idx });
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
