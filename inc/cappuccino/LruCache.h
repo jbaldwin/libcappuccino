@@ -36,12 +36,8 @@ public:
         const KeyType& key,
         ValueType value) -> void;
 
-    template <template <class...> typename RangeType>
-    auto InsertRange(
-        RangeType<KeyValue> key_value_range) -> void;
-    template <template <class...> typename RangeType, template <class, class> typename PairType>
-    auto InsertRange(
-        RangeType<PairType<KeyType, ValueType>> key_value_range) -> void;
+    template <typename RangeType>
+    auto InsertRange(RangeType&& key_value_range) -> void;
 
     auto Delete(
         const KeyType& key) -> bool;
@@ -53,12 +49,12 @@ public:
     auto Find(
         const KeyType& key) -> std::optional<ValueType>;
 
-    template <template <class...> typename RangeType>
-    auto FindRange(
-        RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void;
-    template <template <class...> typename RangeType, template <class, class> typename PairType>
-    auto FindRange(
-        RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void;
+    template <typename RangeType>
+    auto FindRange(const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+
+    template <typename RangeType>
+    auto FindRangeFill(
+        RangeType&& key_optional_value_range) -> void;
 
     auto GetUsedSize() const -> size_t;
 

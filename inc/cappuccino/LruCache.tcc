@@ -21,27 +21,18 @@ LruCache<KeyType, ValueType, SyncType>::LruCache(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto LruCache<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value) -> void
+auto LruCache<KeyType, ValueType, SyncType>::Insert(
+    const KeyType& key,
+    ValueType value) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
     doInsertUpdate(key, std::move(value));
 };
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType>
+template <typename RangeType>
 auto LruCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType<KeyValue> key_value_range) -> void
-{
-    LockScopeGuard<SyncType> guard { m_lock };
-    for (auto& [key, value] : key_value_range) {
-        doInsertUpdate(key, std::move(value));
-    }
-};
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType, template <class, class> typename PairType>
-auto LruCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType<PairType<KeyType, ValueType>> key_value_range) -> void
+    RangeType&& key_value_range) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, value] : key_value_range) {
@@ -83,27 +74,34 @@ auto LruCache<KeyType, ValueType, SyncType>::DeleteRange(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto LruCache<KeyType, ValueType, SyncType>::Find(const KeyType& key) -> std::optional<ValueType>
+auto LruCache<KeyType, ValueType, SyncType>::Find(
+    const KeyType& key) -> std::optional<ValueType>
 {
     LockScopeGuard<SyncType> guard { m_lock };
     return doFind(key);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType>
+template <typename RangeType>
 auto LruCache<KeyType, ValueType, SyncType>::FindRange(
-    RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void
+    const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
-    LockScopeGuard<SyncType> guard { m_lock };
-    for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+    std::unordered_map<KeyType, std::optional<ValueType>> output;
+    output.reserve(std::size(keys));
+
+    for (auto& key : keys) {
+        output.emplace(key, std::nullopt);
     }
+
+    FindRangeFill(output);
+
+    return output;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType, template <class, class> typename PairType>
-auto LruCache<KeyType, ValueType, SyncType>::FindRange(
-    RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void
+template <typename RangeType>
+auto LruCache<KeyType, ValueType, SyncType>::FindRangeFill(
+    RangeType&& key_optional_value_range) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
