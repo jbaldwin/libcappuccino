@@ -34,23 +34,9 @@ auto TlruCache<KeyType, ValueType, SyncType>::Insert(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType>
+template <typename RangeType>
 auto TlruCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType<KeyValue> key_value_range) -> void
-{
-    auto now = std::chrono::steady_clock::now();
-
-    LockScopeGuard<SyncType> guard { m_lock };
-    for (auto& [ttl, key, value] : key_value_range) {
-        auto expired_time = now + ttl;
-        doInsertUpdate(key, std::move(value), now, expired_time);
-    }
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType, template <class, class, class> typename TupleType>
-auto TlruCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType<TupleType<std::chrono::seconds, KeyValue, ValueType>> key_value_range) -> void
+    RangeType&& key_value_range) -> void
 {
     auto now = std::chrono::steady_clock::now();
 
@@ -105,22 +91,29 @@ auto TlruCache<KeyType, ValueType, SyncType>::Find(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class, class...> typename RangeType>
+template <typename RangeType>
 auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
-    RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void
+    const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
+    std::unordered_map<KeyType, std::optional<ValueType>> output;
+    output.reserve(std::size(key_range));
+
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
-    for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key, now);
+    {
+        LockScopeGuard<SyncType> guard { m_lock };
+        for (auto& [key, optional_value] : key_range) {
+            output[key] = doFind(key, now);
+        }
     }
+
+    return output;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template <template <class...> typename RangeType, template <class, class> typename PairType>
-auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
-    RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void
+template <typename RangeType>
+auto TlruCache<KeyType, ValueType, SyncType>::FindRangeFill(
+    RangeType& key_optional_value_range) -> void
 {
     auto now = std::chrono::steady_clock::now();
 

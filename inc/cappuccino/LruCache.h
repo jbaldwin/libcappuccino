@@ -50,7 +50,8 @@ public:
         const KeyType& key) -> std::optional<ValueType>;
 
     template <typename RangeType>
-    auto FindRange(const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+    auto FindRange(
+        const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>;
 
     template <typename RangeType>
     auto FindRangeFill(

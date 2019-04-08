@@ -161,7 +161,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 }
             }
 
-            lru_cache.FindRange(data);
+            lru_cache.FindRangeFill(data);
         }
 
         stop = std::chrono::steady_clock::now();
@@ -316,7 +316,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 }
             }
 
-            lru_cache.FindRange(data);
+            lru_cache.FindRangeFill(data);
         }
 
         stop = std::chrono::steady_clock::now();
@@ -471,7 +471,7 @@ static auto lru_cache_bench_test() -> void
                 }
             }
 
-            lru_cache.FindRange(data);
+            lru_cache.FindRangeFill(data);
         }
 
         stop = std::chrono::steady_clock::now();

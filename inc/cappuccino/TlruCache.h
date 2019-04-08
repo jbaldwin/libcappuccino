@@ -65,15 +65,10 @@ public:
      * any iterable container to satisfy this requirement.
      * @tparam RangeType A container with three items, std::chrono::seconds, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
-     * @{
      */
-    template <template <class...> typename RangeType>
+    template <typename RangeType>
     auto InsertRange(
-        RangeType<KeyValue> key_value_range) -> void;
-    template <template <class...> typename RangeType, template <class, class, class> typename TupleType>
-    auto InsertRange(
-        RangeType<TupleType<std::chrono::seconds, KeyValue, ValueType>> key_value_range) -> void;
-    /** @} */
+        RangeType&& key_value_range) -> void;
 
     /**
      * Attempts to delete the given key.
@@ -103,6 +98,16 @@ public:
 
     /**
      * Attempts to find all the given keys values.
+     * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
+     * @param key_range The keys to lookup their pairs.
+     * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
+     */
+    template <typename RangeType>
+    auto FindRange(
+        const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+
+    /**
+     * Attempts to find all the given keys values.
      *
      * The user should initialize this container with the keys to lookup with the values as all
      * empty optionals.  The keys that are found will have the optionals filled in with the
@@ -111,15 +116,10 @@ public:
      * @tparam RangeType A container with a pair of optional items,
      *                   e.g. vector<pair<k, optional<v>>>, or map<k, optional<v>>.
      * @param key_optional_value_range The keys to optional values to fill out.
-     * @{
      */
-    template <template <class, class...> typename RangeType>
-    auto FindRange(
-        RangeType<KeyType, std::optional<ValueType>>& key_optional_value_range) -> void;
-    template <template <class...> typename RangeType, template <class, class> typename PairType>
-    auto FindRange(
-        RangeType<PairType<KeyType, std::optional<ValueType>>>& key_optional_value_range) -> void;
-    /** @} */
+    template <typename RangeType>
+    auto FindRangeFill(
+        RangeType& key_optional_value_range) -> void;
 
     /**
      * @return The number of elements inside the cache.
