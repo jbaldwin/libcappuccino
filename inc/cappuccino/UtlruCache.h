@@ -122,6 +122,15 @@ public:
         RangeType& key_optional_value_range) -> void;
 
     /**
+     * Updates the uniform TTL for all new items or updated items in the cache.
+     * Existing items that are not touched will TTL out at the previous uniform
+     * TTL time.
+     * @param ttl The new uniform TTL value to apply to all new elements.
+     */
+    auto UpdateTtl(
+        std::chrono::seconds ttl) -> void;
+
+    /**
      * @return The number of elements inside the cache.
      */
     auto GetUsedSize() const -> size_t;

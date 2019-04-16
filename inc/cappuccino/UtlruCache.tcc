@@ -128,6 +128,13 @@ auto UtlruCache<KeyType, ValueType, SyncType>::FindRangeFill(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto UtlruCache<KeyType, ValueType, SyncType>::UpdateTtl(
+    std::chrono::seconds ttl) -> void
+{
+    m_ttl = ttl;
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto UtlruCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
     return m_used_size;
