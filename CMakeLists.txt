@@ -10,6 +10,7 @@ set(SOURCE_FILES
     inc/cappuccino/LockScopeGuard.h
     inc/cappuccino/LruCache.h inc/cappuccino/LruCache.tcc
     inc/cappuccino/MruCache.h inc/cappuccino/MruCache.tcc
+    inc/cappuccino/RrCache.h inc/cappuccino/RrCache.tcc
     inc/cappuccino/SyncImplEnum.h
     inc/cappuccino/TlruCache.h inc/cappuccino/TlruCache.tcc
     inc/cappuccino/UtlruCache.h inc/cappuccino/UtlruCache.tcc

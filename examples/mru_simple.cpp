@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
         auto world = mru_cache.Find(2); // this value will no longer be available.
 
         // Grab and print again!
-        std::cout << hola.value() << ", " <<hello.value() << "!" << std::endl;
+        std::cout << hola.value() << ", " << hello.value() << "!" << std::endl;
 
         // No value should be present in the cache for the world key.
         if (world.has_value()) {

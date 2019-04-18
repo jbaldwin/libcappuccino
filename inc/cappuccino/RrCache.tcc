@@ -1,26 +1,28 @@
-#include "cappuccino/MruCache.h"
+#include "RrCache.h"
+#include "cappuccino/RrCache.h"
 
 #include <numeric>
 
 namespace cappuccino {
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-MruCache<KeyType, ValueType, SyncType>::MruCache(
+RrCache<KeyType, ValueType, SyncType>::RrCache(
     size_t capacity,
     float max_load_factor)
     : m_elements(capacity)
     , m_keyed_elements(capacity)
-    , m_mru_list(capacity)
+    , m_open_list(capacity)
+    , m_random_device()
+    , m_mt(m_random_device())
 {
-    std::iota(m_mru_list.begin(), m_mru_list.end(), 0);
-    m_mru_end = m_mru_list.begin();
+    std::iota(m_open_list.begin(), m_open_list.end(), 0);
 
     m_keyed_elements.max_load_factor(max_load_factor);
     m_keyed_elements.reserve(capacity);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Insert(
+auto RrCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key,
     ValueType value) -> void
 {
@@ -30,7 +32,7 @@ auto MruCache<KeyType, ValueType, SyncType>::Insert(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::InsertRange(
+auto RrCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType&& key_value_range) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
@@ -40,7 +42,7 @@ auto MruCache<KeyType, ValueType, SyncType>::InsertRange(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Delete(
+auto RrCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
     LockScopeGuard<SyncType> guard { m_lock };
@@ -55,7 +57,7 @@ auto MruCache<KeyType, ValueType, SyncType>::Delete(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::DeleteRange(
+auto RrCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
 {
     size_t deleted_elements { 0 };
@@ -70,10 +72,10 @@ auto MruCache<KeyType, ValueType, SyncType>::DeleteRange(
     }
 
     return deleted_elements;
-};
+}
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Find(
+auto RrCache<KeyType, ValueType, SyncType>::Find(
     const KeyType& key) -> std::optional<ValueType>
 {
     LockScopeGuard<SyncType> guard { m_lock };
@@ -82,7 +84,7 @@ auto MruCache<KeyType, ValueType, SyncType>::Find(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::FindRange(
+auto RrCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
     std::unordered_map<KeyType, std::optional<ValueType>> output;
@@ -99,7 +101,7 @@ auto MruCache<KeyType, ValueType, SyncType>::FindRange(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::FindRangeFill(
+auto RrCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
@@ -109,19 +111,19 @@ auto MruCache<KeyType, ValueType, SyncType>::FindRangeFill(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
+auto RrCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
-    return m_used_size;
+    return m_open_list_end;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
+auto RrCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
 {
     return m_elements.size();
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
+auto RrCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value) -> void
 {
@@ -134,67 +136,63 @@ auto MruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doInsert(
+auto RrCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
 {
-    if (m_used_size >= m_elements.size()) {
+    if (m_open_list_end >= m_elements.size()) {
         doPrune();
     }
 
-    auto element_idx = *m_mru_end;
+    auto element_idx = m_open_list[m_open_list_end];
 
     auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
 
     Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
-    element.m_mru_position = m_mru_end;
+    element.m_open_list_position = m_open_list_end;
     element.m_keyed_position = keyed_position;
 
-    ++m_mru_end;
-
-    ++m_used_size;
-
-    // Don't need to call doAccess() since this element is at the most recently used end already.
+    ++m_open_list_end;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doUpdate(
-    MruCache::KeyedIterator keyed_position,
+auto RrCache<KeyType, ValueType, SyncType>::doUpdate(
+    RrCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
 {
     Element& element = m_elements[keyed_position->second];
     element.m_value = std::move(value);
-
-    // Move to most recently used end.
-    doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doDelete(
+auto RrCache<KeyType, ValueType, SyncType>::doDelete(
     size_t element_idx) -> void
 {
     Element& element = m_elements[element_idx];
 
-    if (element.m_mru_position != std::prev(m_mru_end)) {
-        m_mru_list.splice(m_mru_end, m_mru_list, element.m_mru_position);
+    // If this isn't the last item already (which is likely), swap it into that position.
+    if (element.m_open_list_position != m_open_list_end - 1) {
+        // Since this algo does random replacement eviction, the order of
+        // the open list doesn't really matter.  This is different from an LRU
+        // where the ordering *does* matter.  Since ordering doesn't matter
+        // just swap the indexes in the open list to the partition point 'end'
+        // and then delete that item.
+        std::swap(element.m_open_list_position, m_open_list_end);
     }
-    --m_mru_end;
+    --m_open_list_end; // delete the last item
 
     m_keyed_elements.erase(element.m_keyed_position);
-
-    --m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doFind(
+auto RrCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         size_t element_idx = keyed_position->second;
         Element& element = m_elements[element_idx];
-        doAccess(element);
         return { element.m_value };
     }
 
@@ -202,19 +200,12 @@ auto MruCache<KeyType, ValueType, SyncType>::doFind(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doAccess(
-    Element& element) -> void
+auto RrCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
-    // The the accessed item at the end of th MRU list, the end is the most recently
-    // used, the beginning is the least recently used.
-    m_mru_list.splice(m_mru_end, m_mru_list, element.m_mru_position);
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doPrune() -> void
-{
-    if (m_used_size > 0) {
-        doDelete(m_mru_list.back());
+    if (m_open_list_end > 0) {
+        std::uniform_int_distribution<size_t> dist { 0, m_open_list_end - 1 };
+        size_t delete_idx = dist(m_mt);
+        doDelete(delete_idx);
     }
 }
 

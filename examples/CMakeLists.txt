@@ -43,7 +43,16 @@ target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 project(mru_simple CXX)
 set(MRU_SIMPLE_SOURCE_FILES
     examples/mru_simple.cpp
-    )
+)
 add_executable(${PROJECT_NAME} ${MRU_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
+### rr_simple ###
+project(rr_simple CXX)
+set(RR_SIMPLE_SOURCE_FILES
+    examples/rr_simple.cpp
+)
+add_executable(${PROJECT_NAME} ${RR_SIMPLE_SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
