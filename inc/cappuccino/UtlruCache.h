@@ -20,6 +20,13 @@ namespace cappuccino {
  * in the cache, rather than tracking items individually.
  *
  * This cache is sync aware and can be used concurrently from multiple threads safely.
+ * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
+ *
+ * @tparam KeyType The key type.  Must support std::hash().
+ * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
+ *                   structure value is large it is advisable to store in a shared ptr.
+ * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
+ *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class UtlruCache {

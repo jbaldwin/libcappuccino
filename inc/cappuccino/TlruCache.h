@@ -18,7 +18,14 @@ namespace cappuccino {
  * and least recently used policy.  Expired key value pairs are evicted before
  * least recently used.
  *
- * This cache is sync aware and can be used concurrently from multiple threads safely.
+ * This cache is sync aware by default and can be used concurrently from multiple threads safely.
+ * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
+ *
+ * @tparam KeyType The key type.  Must support std::hash() and operator<().
+ * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
+ *                   structure value is large it is advisable to store in a shared ptr.
+ * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
+ *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class TlruCache {
@@ -61,7 +68,7 @@ public:
     /**
      * Inserts or updates a range of key values pairs with their given TTL.  This expects a container
      * that has 3 values in the {std::chrono::seconds, KeyType, ValueType} ordering.
-     * There is a simple struct provided on the LruCache::KeyValue that can be put into
+     * There is a simple struct provided on the TlruCache::KeyValue that can be put into
      * any iterable container to satisfy this requirement.
      * @tparam RangeType A container with three items, std::chrono::seconds, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.

@@ -101,7 +101,7 @@ auto LruCache<KeyType, ValueType, SyncType>::FindRange(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto LruCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType&& key_optional_value_range) -> void
+    RangeType& key_optional_value_range) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
@@ -195,6 +195,7 @@ auto LruCache<KeyType, ValueType, SyncType>::doFind(
     if (keyed_position != m_keyed_elements.end()) {
         size_t element_idx = keyed_position->second;
         Element& element = m_elements[element_idx];
+        doAccess(element);
         return { element.m_value };
     }
 

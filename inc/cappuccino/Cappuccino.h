@@ -3,3 +3,4 @@
 #include "cappuccino/LruCache.h"
 #include "cappuccino/TlruCache.h"
 #include "cappuccino/UtlruCache.h"
+#include "cappuccino/MruCache.h"
