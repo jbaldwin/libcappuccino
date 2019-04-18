@@ -74,25 +74,28 @@ auto MruCache<KeyType, ValueType, SyncType>::DeleteRange(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto MruCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key) -> std::optional<ValueType>
+    const KeyType& key,
+    bool peek) -> std::optional<ValueType>
 {
     LockScopeGuard<SyncType> guard { m_lock };
-    return doFind(key);
+    return doFind(key, peek);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto MruCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    const RangeType& key_range,
+    bool peek) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
     std::unordered_map<KeyType, std::optional<ValueType>> output;
-    output.reserve(std::size(keys));
+    output.reserve(std::size(key_range));
 
-    for (auto& key : keys) {
-        output.emplace(key, std::nullopt);
+    {
+        LockScopeGuard<SyncType> guard { m_lock };
+        for (auto& key : key_range) {
+            output[key] = doFind(key, peek);
+        }
     }
-
-    FindRangeFill(output);
 
     return output;
 }
@@ -100,11 +103,12 @@ auto MruCache<KeyType, ValueType, SyncType>::FindRange(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto MruCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType& key_optional_value_range) -> void
+    RangeType& key_optional_value_range,
+    bool peek) -> void
 {
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key);
+        optional_value = doFind(key, peek);
     }
 }
 
@@ -188,13 +192,17 @@ auto MruCache<KeyType, ValueType, SyncType>::doDelete(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto MruCache<KeyType, ValueType, SyncType>::doFind(
-    const KeyType& key) -> std::optional<ValueType>
+    const KeyType& key,
+    bool peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         size_t element_idx = keyed_position->second;
         Element& element = m_elements[element_idx];
-        doAccess(element);
+        // Do not update the mru access if peeking.
+        if (!peek) {
+            doAccess(element);
+        }
         return { element.m_value };
     }
 

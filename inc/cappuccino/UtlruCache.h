@@ -98,20 +98,24 @@ public:
     /**
      * Attempts to find the given key's value.
      * @param key The key to lookup its value.
+     * @param peek Should the find act like all the item was not used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
     auto Find(
-        const KeyType& key) -> std::optional<ValueType>;
+        const KeyType& key,
+        bool peek = false) -> std::optional<ValueType>;
 
     /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to lookup, e.g. vector<KeyType>.
      * @param key_range A container with the set of keys to lookup.
+     * @param peek Should the find act like all the items were not used?
      * @return All input keys to either a std::nullopt if it doesn't exist, or the value if it does.
      */
     template <typename RangeType>
     auto FindRange(
-        const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        const RangeType& key_range,
+        bool peek = false) -> std::unordered_map<KeyType, std::optional<ValueType>>;
 
     /**
      * Attempts to find all given keys values.
@@ -123,10 +127,12 @@ public:
      * @tparam RangeType A container with a pair of optional items,
      *                   e.g. vector<pair<k, optional<v>>> or map<k, optional<v>>.
      * @param key_optional_value_range The keys to optional values to fill out.
+     * @param peek Should the find act like all the items were not used?
      */
     template <typename RangeType>
     auto FindRangeFill(
-        RangeType& key_optional_value_range) -> void;
+        RangeType& key_optional_value_range,
+        bool peek = false) -> void;
 
     /**
      * Updates the uniform TTL for all new items or updated items in the cache.
@@ -189,7 +195,8 @@ private:
 
     auto doFind(
         const KeyType& key,
-        std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
+        std::chrono::steady_clock::time_point now,
+        bool peek) -> std::optional<ValueType>;
 
     auto doAccess(
         Element& element) -> void;

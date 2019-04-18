@@ -82,18 +82,20 @@ auto TlruCache<KeyType, ValueType, SyncType>::DeleteRange(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key) -> std::optional<ValueType>
+    const KeyType& key,
+    bool peek) -> std::optional<ValueType>
 {
     auto now = std::chrono::steady_clock::now();
 
     LockScopeGuard<SyncType> guard { m_lock };
-    return doFind(key, now);
+    return doFind(key, now, peek);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    const RangeType& key_range,
+    bool peek) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
     std::unordered_map<KeyType, std::optional<ValueType>> output;
     output.reserve(std::size(key_range));
@@ -102,8 +104,8 @@ auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
 
     {
         LockScopeGuard<SyncType> guard { m_lock };
-        for (auto& [key, optional_value] : key_range) {
-            output[key] = doFind(key, now);
+        for (auto& key : key_range) {
+            output[key] = doFind(key, now, peek);
         }
     }
 
@@ -113,13 +115,14 @@ auto TlruCache<KeyType, ValueType, SyncType>::FindRange(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto TlruCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType& key_optional_value_range) -> void
+    RangeType& key_optional_value_range,
+    bool peek) -> void
 {
     auto now = std::chrono::steady_clock::now();
 
     LockScopeGuard<SyncType> guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
-        optional_value = doFind(key, now);
+        optional_value = doFind(key, now, peek);
     }
 }
 
@@ -242,7 +245,8 @@ auto TlruCache<KeyType, ValueType, SyncType>::doDelete(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key,
-    std::chrono::steady_clock::time_point now) -> std::optional<ValueType>
+    std::chrono::steady_clock::time_point now,
+    bool peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
@@ -251,7 +255,10 @@ auto TlruCache<KeyType, ValueType, SyncType>::doFind(
 
         // Has the element TTL'ed?
         if (now < element.m_expire_time) {
-            doAccess(element);
+            // Do not update the items access if peeking.
+            if (!peek) {
+                doAccess(element);
+            }
             return { element.m_value };
         } else {
             // Its dead anyways, lets delete it now.

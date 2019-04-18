@@ -99,12 +99,12 @@ public:
     /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
-     * @param keys The keys to lookup their pairs.
+     * @param key_range The keys to lookup their pairs.
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
     template <typename RangeType>
     auto FindRange(
-        const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>;
 
     /**
      * Attempts to find all the given keys values.

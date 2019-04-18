@@ -85,16 +85,17 @@ auto RrCache<KeyType, ValueType, SyncType>::Find(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto RrCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>
 {
     std::unordered_map<KeyType, std::optional<ValueType>> output;
-    output.reserve(std::size(keys));
+    output.reserve(std::size(key_range));
 
-    for (auto& key : keys) {
-        output.emplace(key, std::nullopt);
+    {
+        LockScopeGuard<SyncType> guard { m_lock };
+        for (auto& key : key_range) {
+            output[key] = doFind(key);
+        }
     }
-
-    FindRangeFill(output);
 
     return output;
 }

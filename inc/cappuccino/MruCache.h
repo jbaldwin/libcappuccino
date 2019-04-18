@@ -92,20 +92,24 @@ public:
     /**
      * Attempts to find the given key's value.
      * @param key The key to lookup its value.
+     * @param peek  Should the find act like all the item was not used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
     auto Find(
-        const KeyType& key) -> std::optional<ValueType>;
+        const KeyType& key,
+        bool peek = false) -> std::optional<ValueType>;
 
     /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
-     * @param keys The keys to lookup their pairs.
+     * @param key_range The keys to lookup their pairs.
+     * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
     template <typename RangeType>
     auto FindRange(
-        const RangeType& keys) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        const RangeType& key_range,
+        bool peek = false) -> std::unordered_map<KeyType, std::optional<ValueType>>;
 
     /**
      * Attemps to find all the given keys values.
@@ -117,10 +121,12 @@ public:
      * @tparam RangeType A container with a pair of optional items,
      *                   e.g. map<KeyType, optional<ValueType>>.
      * @param key_optional_value_range The keys to optional values to fill out.
+     * @param peek Should the find act like all the items were not used?
      */
     template <typename RangeType>
     auto FindRangeFill(
-        RangeType& key_optional_value_range) -> void;
+        RangeType& key_optional_value_range,
+        bool peek = false) -> void;
 
     /**
      * @return The number of elements inside the cache.
@@ -158,7 +164,8 @@ private:
         size_t element_idx) -> void;
 
     auto doFind(
-        const KeyType& key) -> std::optional<ValueType>;
+        const KeyType& key,
+        bool peek) -> std::optional<ValueType>;
 
     auto doAccess(
         Element& element) -> void;
