@@ -1,16 +1,16 @@
-#include "cappuccino/LockScopeGuard.h"
 #include "cappuccino/LfuCache.h"
+#include "cappuccino/LockScopeGuard.h"
 
 #include <numeric>
 
 namespace cappuccino {
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     size_t capacity,
     float max_load_factor)
-    :   m_elements(capacity),
-        m_open_list(capacity)
+    : m_elements(capacity)
+    , m_open_list(capacity)
 {
     std::iota(m_open_list.begin(), m_open_list.end(), 0);
     m_open_list_end = m_open_list.begin();
@@ -19,7 +19,7 @@ LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     m_keyed_elements.reserve(capacity);
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key, ValueType value) -> void
 {
@@ -27,8 +27,8 @@ auto LfuCache<KeyType, ValueType, SyncType>::Insert(
     doInsertUpdate(key, std::move(value));
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template<typename RangeType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType&& key_value_range) -> void
 {
@@ -38,7 +38,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
     }
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
@@ -52,7 +52,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     }
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
@@ -71,7 +71,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     return deleted_elements;
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Find(
     const KeyType& key, bool peek) -> std::optional<ValueType>
 {
@@ -79,8 +79,8 @@ auto LfuCache<KeyType, ValueType, SyncType>::Find(
     return doFind(key, peek);
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template<typename RangeType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
     bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
@@ -98,8 +98,8 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     return output;
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
-template<typename RangeType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range, bool peek) -> void
 {
@@ -109,19 +109,19 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
     }
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
     return m_used_size;
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
 {
     return m_elements.size();
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value) -> void
@@ -134,13 +134,12 @@ auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     }
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
 {
-    if(m_used_size >= m_elements.size())
-    {
+    if (m_used_size >= m_elements.size()) {
         doPrune();
     }
 
@@ -160,7 +159,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     ++m_used_size;
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
     LfuCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
@@ -171,14 +170,13 @@ auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
     doAccess(element);
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
     size_t element_idx) -> void
 {
     Element& element = m_elements[element_idx];
 
-    if(element.m_open_list_position != std::prev(m_open_list_end))
-    {
+    if (element.m_open_list_position != std::prev(m_open_list_end)) {
         m_open_list.splice(m_open_list_end, m_open_list, element.m_open_list_position);
     }
     --m_open_list_end;
@@ -189,18 +187,17 @@ auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
     --m_used_size;
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key,
     bool peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if(keyed_position != m_keyed_elements.end())
-    {
+    if (keyed_position != m_keyed_elements.end()) {
         size_t element_idx = keyed_position->second;
         Element& element = m_elements[element_idx];
         // Don't update the elements access in the LRU if peeking.
-        if(!peek) {
+        if (!peek) {
             doAccess(element);
         }
         return { element.m_value };
@@ -209,7 +206,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doFind(
     return {};
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
     Element& element) -> void
 {
@@ -218,10 +215,10 @@ auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
     element.m_lfu_position = m_lfu_list.emplace(use_count + 1, element.m_keyed_position->second);
 }
 
-template<typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
-    if(m_used_size > 0) {
+    if (m_used_size > 0) {
         doDelete(m_lfu_list.begin()->second);
     }
 }

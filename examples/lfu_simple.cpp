@@ -7,7 +7,7 @@ using namespace cappuccino;
 int main(int argc, char* argv[])
 {
     // Create a cache with 2 items.
-    LfuCache<std::string, std::string> lfu_cache{2};
+    LfuCache<std::string, std::string> lfu_cache { 2 };
 
     // Insert some data.
     lfu_cache.Insert("foo", "Hello");
@@ -24,21 +24,18 @@ int main(int argc, char* argv[])
     lfu_cache.Insert("foobar", "Hello World");
 
     auto bar2 = lfu_cache.Find("bar");
-    if(bar2.has_value())
-    {
+    if (bar2.has_value()) {
         std::cout << "bar2 should not have a value!" << std::endl;
     }
 
     auto foo3 = lfu_cache.Find("foo");
     auto foobar = lfu_cache.Find("foobar");
 
-    if(foo3.has_value())
-    {
+    if (foo3.has_value()) {
         std::cout << "foo=" << foo3.value() << std::endl;
     }
 
-    if(foobar.has_value())
-    {
+    if (foobar.has_value()) {
         std::cout << "foobar=" << foobar.value() << std::endl;
     }
 

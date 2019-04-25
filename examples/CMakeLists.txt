@@ -12,6 +12,15 @@ add_executable(${PROJECT_NAME} ${LFU_SIMPLE_SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
 
+### lfuda_simple ###
+project(lfuda_simple CXX)
+set(LFUDA_SIMPLE_SOURCE_FILES
+    examples/lfuda_simple.cpp
+)
+add_executable(${PROJECT_NAME} ${LFUDA_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
+target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+
 ### lru_simple ###
 project(lru_simple CXX)
 set(LRU_SIMPLE_SOURCE_FILES

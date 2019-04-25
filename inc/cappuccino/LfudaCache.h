@@ -1,7 +1,8 @@
 #pragma once
 
-#include "cappuccino/SyncImplEnum.h"
+#include "cappuccino/LfuCache.h"
 
+#include <chrono>
 #include <list>
 #include <map>
 #include <mutex>
@@ -10,24 +11,13 @@
 
 namespace cappuccino {
 
-/**
- * Least Frequently Used (LFU) Cache.
- * Each key value pair is evicted based on being the least frequently used, and no other
- * criteria.
- *
- * This cache is sync aware and can be used concurrently from multiple threads safely.
- * To remove locks/synchronization used SyncImplEnum::UNSYNC when creating the cache.
- *
- * @tparam KeyType The key type.  Must support std::hash() and operator<().
- * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
- *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam SyncType By default t his cache is thread safe, can be disabled for caches specified
- *                  to a single thread.
- */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
-class LfuCache {
+class LfudaCache {
 private:
     using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+
+    /// The first item is the 'm_elements' index, the second is when the item was last touched.
+    using AgeIterator = std::list<std::pair<size_t, std::chrono::steady_clock::time_point>>::iterator;
 
 public:
     struct KeyValue {
@@ -45,10 +35,17 @@ public:
 
     /**
      * @param capacity The maximum number of key value pairs allowed in the cache.
+     * @param dynamic_age_tick The amount of time to pass before dynamically aging items.
+     *                         Items that haven't been used for this amount of time will have
+     *                         their use count reduced by the dynamic age ratio value.
+     * @param dynamic_age_ratio The 'used' amount to age items by when they dynamically age.
+     *                          The default is to halve their use count.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit LfuCache(
+    explicit LfudaCache(
         size_t capacity,
+        std::chrono::seconds dynamic_age_tick = std::chrono::minutes { 1 },
+        float dynamic_age_ratio = 0.5f,
         float max_load_factor = 1.0f);
 
     /**
@@ -101,6 +98,16 @@ public:
         bool peek = false) -> std::optional<ValueType>;
 
     /**
+     * Attempts to find the given key's value.
+     * @param key The key to lookup its value.
+     * @param peek Should the find act like the item wasn't used?
+     * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
+     */
+    auto FindWithUseCount(
+        const KeyType& key,
+        bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
+
+    /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
      * @param key_range The keys to lookup their pairs.
@@ -131,6 +138,12 @@ public:
         bool peek = false) -> void;
 
     /**
+     * Attempts to dynamically age the elements in the cache.
+     * @return The number of items dynamically aged.
+     */
+    auto DynamicallyAge() -> size_t;
+
+    /**
      * @return The number of elements inside the cache.
      */
     auto GetUsedSize() const -> size_t;
@@ -147,41 +160,60 @@ private:
         KeyedIterator m_keyed_position;
         /// The iterator into the lfu data structure.
         std::multimap<size_t, size_t>::iterator m_lfu_position;
-        /// The iterator into the open list data structure.
-        std::list<size_t>::iterator m_open_list_position;
+        /// The iterator into the dynamic age data structure.
+        AgeIterator m_lfu_aged_position;
         /// The element's value.
         ValueType m_value;
     };
 
     auto doInsertUpdate(
         const KeyType& key,
-        ValueType&& value) -> void;
+        ValueType&& value,
+        std::chrono::steady_clock::time_point now) -> void;
 
     auto doInsert(
         const KeyType& key,
-        ValueType&& value) -> void;
+        ValueType&& value,
+        std::chrono::steady_clock::time_point now) -> void;
 
     auto doUpdate(
         KeyedIterator keyed_position,
-        ValueType&& value) -> void;
+        ValueType&& value,
+        std::chrono::steady_clock::time_point now) -> void;
 
     auto doDelete(
         size_t element_idx) -> void;
 
     auto doFind(
         const KeyType& key,
-        bool peek) -> std::optional<ValueType>;
+        bool peek,
+        std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
+
+    auto doFindWithUseCount(
+        const KeyType& key,
+        bool peek,
+        std::chrono::steady_clock::time_point now) -> std::optional<std::pair<ValueType, size_t>>;
 
     auto doAccess(
-        Element& element) -> void;
+        Element& element,
+        std::chrono::steady_clock::time_point now) -> void;
 
-    auto doPrune() -> void;
+    auto doPrune(
+        std::chrono::steady_clock::time_point now) -> void;
+
+    auto doDynamicAge(
+        std::chrono::steady_clock::time_point now) -> size_t;
 
     /// Cache lock for all mutations if sync is enabled.
     std::mutex m_lock;
 
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
+
+    /// The amount of time for an element to not be touched to dynamically age.
+    std::chrono::seconds m_dynamic_age_tick { std::chrono::minutes { 1 } };
+    /// The ratio amount of 'uses' to remove when an element dynamically ages.
+    float m_dynamic_age_ratio { 0.5f };
 
     /// The main store for the key value pairs and metadata for each element.
     std::vector<Element> m_elements;
@@ -190,12 +222,12 @@ private:
     /// The lfu sorted map, the key is the number of times the element has been used,
     /// the value is the index into 'm_elements'.
     std::multimap<size_t, size_t> m_lfu_list;
-    /// The open list of un-used slots in 'm_elements'.
-    std::list<size_t> m_open_list;
+    /// The dynamic age list, this also contains a partition on un-used 'm_elements'.
+    std::list<std::pair<size_t, std::chrono::steady_clock::time_point>> m_dynamic_age_list;
     /// The end of the open list to pull open slots from.
-    std::list<size_t>::iterator m_open_list_end;
+    AgeIterator m_open_list_end;
 };
 
 } // namespace cappuccino
 
-#include "cappuccino/LfuCache.tcc"
+#include "cappuccino/LfudaCache.tcc"
