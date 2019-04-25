@@ -115,7 +115,7 @@ public:
     template <typename RangeType>
     auto FindRange(
         const RangeType& key_range,
-        bool peek = false) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all given keys values.

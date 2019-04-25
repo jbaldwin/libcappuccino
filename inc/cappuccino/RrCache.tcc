@@ -10,7 +10,6 @@ RrCache<KeyType, ValueType, SyncType>::RrCache(
     size_t capacity,
     float max_load_factor)
     : m_elements(capacity)
-    , m_keyed_elements(capacity)
     , m_open_list(capacity)
     , m_random_device()
     , m_mt(m_random_device())
@@ -85,15 +84,15 @@ auto RrCache<KeyType, ValueType, SyncType>::Find(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto RrCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
-    std::unordered_map<KeyType, std::optional<ValueType>> output;
+    std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));
 
     {
         LockScopeGuard<SyncType> guard { m_lock };
         for (auto& key : key_range) {
-            output[key] = doFind(key);
+            output.emplace_back(key, doFind(key));
         }
     }
 

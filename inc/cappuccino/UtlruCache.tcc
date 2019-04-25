@@ -12,7 +12,6 @@ UtlruCache<KeyType, ValueType, SyncType>::UtlruCache(
     float max_load_factor)
     : m_ttl(ttl)
     , m_elements(capacity)
-    , m_keyed_elements(capacity)
     , m_lru_list(capacity)
 {
     std::iota(m_lru_list.begin(), m_lru_list.end(), 0);
@@ -97,9 +96,9 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
-    bool peek) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
-    std::unordered_map<KeyType, std::optional<ValueType>> output;
+    std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));
 
     auto now = std::chrono::steady_clock::now();
@@ -107,7 +106,7 @@ auto UtlruCache<KeyType, ValueType, SyncType>::FindRange(
     {
         LockScopeGuard<SyncType> guard { m_lock };
         for (auto& key : key_range) {
-            output[key] = doFind(key, now, peek);
+            output.emplace_back(key, doFind(key, now, peek));
         }
     }
 

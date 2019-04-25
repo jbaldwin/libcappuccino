@@ -9,7 +9,6 @@ MruCache<KeyType, ValueType, SyncType>::MruCache(
     size_t capacity,
     float max_load_factor)
     : m_elements(capacity)
-    , m_keyed_elements(capacity)
     , m_mru_list(capacity)
 {
     std::iota(m_mru_list.begin(), m_mru_list.end(), 0);
@@ -85,15 +84,15 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto MruCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
-    bool peek) -> std::unordered_map<KeyType, std::optional<ValueType>>
+    bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
-    std::unordered_map<KeyType, std::optional<ValueType>> output;
+    std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));
 
     {
         LockScopeGuard<SyncType> guard { m_lock };
         for (auto& key : key_range) {
-            output[key] = doFind(key, peek);
+            output.emplace_back(key, doFind(key, peek));
         }
     }
 
