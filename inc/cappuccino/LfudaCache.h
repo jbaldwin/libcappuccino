@@ -11,6 +11,24 @@
 
 namespace cappuccino {
 
+/**
+ * Least Frequently Used (LFU) Cache with Dynamic Aging.
+ * Each key value pair is evicted based on being the least frequently used, and no other
+ * criteria.  However, items will dynamically age based on a time tick frequency and a ratio
+ * to reduce its use count.  This means that items that are hot for a short while won't
+ * stick around in the cache with high use counts as they will dynamically age out over
+ * a period of time.  The dynamic age tick count as well as the ratio can be tuned by the
+ * user of the cache.
+ *
+ * This cache is sync aware and can be used concurrently from multiple threads safely.
+ * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
+ *
+ * @tparam KeyType The key type.  Must support std::hash() and operator<()
+ * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
+ *                   structure value is large it is advisable to store in a shared ptr.
+ * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
+ *                  to a single thread.
+ */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class LfudaCache {
 private:
@@ -50,6 +68,9 @@ public:
 
     /**
      * Inserts or updates the given key value pair.
+     * Note that this function will attempt to dynamically age as many items as it
+     * can that are ready to be dynamically aged.  Worst case running time is O(n)
+     * if every item was inserted into the cache with the same timestamp.
      * @param key The key to store the value under.
      * @param value The value of the data to store.
      */
@@ -60,8 +81,14 @@ public:
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
      * that has 2 values in the {KeyType, ValueType} ordering.
-     * There is a simple struct provided on the LruCache::KeyValue that can be put
+     * There is a simple struct provided on the LfudaCache::KeyValue that can be put
      * into any iterable container to satisfy this requirement.
+     *
+     * Note that this function might make future Inserts extremely expensive if
+     * it is inserting / updating a lot of items at once.  This is because each item inserted
+     * will have the same dynamic age timestamp and could cause Inserts to be very expensive
+     * when all of those items dynamically age at the same time.  User beware.
+     *
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
      */
@@ -139,6 +166,9 @@ public:
 
     /**
      * Attempts to dynamically age the elements in the cache.
+     * This function has a worst case running time of O(n) IIF every element is inserted
+     * with the same timestamp -- as it will dynamically age every item in the cache if they
+     * are all ready to be aged.
      * @return The number of items dynamically aged.
      */
     auto DynamicallyAge() -> size_t;
@@ -161,7 +191,7 @@ private:
         /// The iterator into the lfu data structure.
         std::multimap<size_t, size_t>::iterator m_lfu_position;
         /// The iterator into the dynamic age data structure.
-        AgeIterator m_lfu_aged_position;
+        AgeIterator m_dynamic_age_position;
         /// The element's value.
         ValueType m_value;
     };

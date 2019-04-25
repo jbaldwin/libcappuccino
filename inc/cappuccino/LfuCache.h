@@ -21,7 +21,7 @@ namespace cappuccino {
  * @tparam KeyType The key type.  Must support std::hash() and operator<().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam SyncType By default t his cache is thread safe, can be disabled for caches specified
+ * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
@@ -63,7 +63,7 @@ public:
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
      * that has 2 values in the {KeyType, ValueType} ordering.
-     * There is a simple struct provided on the LruCache::KeyValue that can be put
+     * There is a simple struct provided on the LfuCache::KeyValue that can be put
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.

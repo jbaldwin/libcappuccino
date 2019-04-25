@@ -199,7 +199,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doInsert(
     element.m_value = std::move(value);
     element.m_keyed_position = keyed_position;
     element.m_lfu_position = lfu_position;
-    element.m_lfu_aged_position = m_open_list_end;
+    element.m_dynamic_age_position = m_open_list_end;
 
     ++m_open_list_end;
 
@@ -224,8 +224,8 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doDelete(
 {
     Element& element = m_elements[element_idx];
 
-    if (element.m_lfu_aged_position != std::prev(m_open_list_end)) {
-        m_dynamic_age_list.splice(m_open_list_end, m_dynamic_age_list, element.m_lfu_aged_position);
+    if (element.m_dynamic_age_position != std::prev(m_open_list_end)) {
+        m_dynamic_age_list.splice(m_open_list_end, m_dynamic_age_list, element.m_dynamic_age_position);
     }
     --m_open_list_end;
 
@@ -286,10 +286,10 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doAccess(
     // Update dynamic aging position.
     auto last_aged_item = std::prev(m_open_list_end);
     // swap to the end of the aged list and update its time.
-    if (element.m_lfu_aged_position != last_aged_item) {
-        m_dynamic_age_list.splice(last_aged_item, m_dynamic_age_list, element.m_lfu_aged_position);
+    if (element.m_dynamic_age_position != last_aged_item) {
+        m_dynamic_age_list.splice(last_aged_item, m_dynamic_age_list, element.m_dynamic_age_position);
     }
-    element.m_lfu_aged_position->second = now;
+    element.m_dynamic_age_position->second = now;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -321,7 +321,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doDynamicAge(
         // Update its dynamic age time to now.
         da_start->second = now;
 
-        // Now /= ratio its use count to actually age it.  This requires
+        // Now *= ratio its use count to actually age it.  This requires
         // deleting from and re-inserting into the lfu data structure.
         Element& element = m_elements[da_start->first];
         size_t use_count = element.m_lfu_position->first;
