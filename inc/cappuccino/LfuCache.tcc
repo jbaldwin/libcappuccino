@@ -1,18 +1,14 @@
 #include "cappuccino/LfuCache.h"
 #include "cappuccino/LockScopeGuard.h"
 
-#include <numeric>
-
 namespace cappuccino {
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     size_t capacity,
     float max_load_factor)
-    : m_elements(capacity)
-    , m_open_list(capacity)
+    : m_open_list(capacity)
 {
-    std::iota(m_open_list.begin(), m_open_list.end(), 0);
     m_open_list_end = m_open_list.begin();
 
     m_keyed_elements.max_load_factor(max_load_factor);
@@ -80,6 +76,15 @@ auto LfuCache<KeyType, ValueType, SyncType>::Find(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
+    const KeyType& key,
+    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+{
+    LockScopeGuard<SyncType> guard { m_lock };
+    return doFindWithUseCount(key, peek);
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
@@ -118,7 +123,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
 {
-    return m_elements.size();
+    return m_open_list.size();
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -139,20 +144,18 @@ auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
 {
-    if (m_used_size >= m_elements.size()) {
+    if (m_used_size >= m_open_list.size()) {
         doPrune();
     }
 
-    auto element_idx = *m_open_list_end;
+    Element& element = *m_open_list_end;
 
-    auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
-    auto lfu_position = m_lfu_list.emplace(1, element_idx);
+    auto keyed_position = m_keyed_elements.emplace(key, m_open_list_end).first;
+    auto lfu_position = m_lfu_list.emplace(1, m_open_list_end);
 
-    Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
     element.m_keyed_position = keyed_position;
     element.m_lfu_position = lfu_position;
-    element.m_open_list_position = m_open_list_end;
 
     ++m_open_list_end;
 
@@ -164,7 +167,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
     LfuCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
 {
-    Element& element = m_elements[keyed_position->second];
+    Element& element = *keyed_position->second;
     element.m_value = std::move(value);
 
     doAccess(element);
@@ -172,12 +175,12 @@ auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
-    size_t element_idx) -> void
+    OpenListIterator open_list_position) -> void
 {
-    Element& element = m_elements[element_idx];
+    Element& element = *open_list_position;
 
-    if (element.m_open_list_position != std::prev(m_open_list_end)) {
-        m_open_list.splice(m_open_list_end, m_open_list, element.m_open_list_position);
+    if (open_list_position != std::prev(m_open_list_end)) {
+        m_open_list.splice(m_open_list_end, m_open_list, open_list_position);
     }
     --m_open_list_end;
 
@@ -194,13 +197,30 @@ auto LfuCache<KeyType, ValueType, SyncType>::doFind(
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        size_t element_idx = keyed_position->second;
-        Element& element = m_elements[element_idx];
+        Element& element = *keyed_position->second;
         // Don't update the elements access in the LRU if peeking.
         if (!peek) {
             doAccess(element);
         }
         return { element.m_value };
+    }
+
+    return {};
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
+    const KeyType& key,
+    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+{
+    auto keyed_position = m_keyed_elements.find(key);
+    if (keyed_position != m_keyed_elements.end()) {
+        Element& element = *keyed_position->second;
+        // Don't update the elements access in the LRU if peeking.
+        if (!peek) {
+            doAccess(element);
+        }
+        return { std::make_pair(element.m_value, element.m_lfu_position->first) };
     }
 
     return {};

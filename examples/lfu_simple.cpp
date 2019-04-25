@@ -17,26 +17,28 @@ int main(int argc, char* argv[])
     auto foo1 = lfu_cache.Find("foo");
     auto foo2 = lfu_cache.Find("foo");
 
-    // Touch bar  once.
+    // Touch bar once.
     auto bar1 = lfu_cache.Find("bar");
 
     // Insert foobar, bar should be replaced.
     lfu_cache.Insert("foobar", "Hello World");
 
-    auto bar2 = lfu_cache.Find("bar");
+    auto bar2 = lfu_cache.FindWithUseCount("bar");
     if (bar2.has_value()) {
         std::cout << "bar2 should not have a value!" << std::endl;
     }
 
-    auto foo3 = lfu_cache.Find("foo");
-    auto foobar = lfu_cache.Find("foobar");
+    auto foo3 = lfu_cache.FindWithUseCount("foo");
+    auto foobar = lfu_cache.FindWithUseCount("foobar");
 
     if (foo3.has_value()) {
-        std::cout << "foo=" << foo3.value() << std::endl;
+        auto& [value, use_count] = foo3.value();
+        std::cout << "foo=" << value << " use_count=" << use_count << std::endl;
     }
 
     if (foobar.has_value()) {
-        std::cout << "foobar=" << foobar.value() << std::endl;
+        auto& [value, use_count] = foobar.value();
+        std::cout << "foobar=" << value << " use_count=" << use_count << std::endl;
     }
 
     return 0;

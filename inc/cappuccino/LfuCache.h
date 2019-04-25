@@ -27,7 +27,11 @@ namespace cappuccino {
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class LfuCache {
 private:
-    using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+    struct Element;
+
+    using OpenListIterator = typename std::list<Element>::iterator;
+    using LfuIterator = typename std::multimap<size_t, OpenListIterator>::iterator;
+    using KeyedIterator = typename std::unordered_map<KeyType, OpenListIterator>::iterator;
 
 public:
     struct KeyValue {
@@ -101,6 +105,16 @@ public:
         bool peek = false) -> std::optional<ValueType>;
 
     /**
+     * Attempts to find the given key's value and use count.
+     * @param key The key to lookup its value.
+     * @param peek Should the find act like the item wasn't used?
+     * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
+     */
+    auto FindWithUseCount(
+        const KeyType& key,
+        bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
+
+    /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
      * @param key_range The keys to lookup their pairs.
@@ -146,9 +160,7 @@ private:
         /// The iterator into the keyed data structure.
         KeyedIterator m_keyed_position;
         /// The iterator into the lfu data structure.
-        std::multimap<size_t, size_t>::iterator m_lfu_position;
-        /// The iterator into the open list data structure.
-        std::list<size_t>::iterator m_open_list_position;
+        LfuIterator m_lfu_position;
         /// The element's value.
         ValueType m_value;
     };
@@ -166,11 +178,15 @@ private:
         ValueType&& value) -> void;
 
     auto doDelete(
-        size_t element_idx) -> void;
+        OpenListIterator open_list_position) -> void;
 
     auto doFind(
         const KeyType& key,
         bool peek) -> std::optional<ValueType>;
+
+    auto doFindWithUseCount(
+        const KeyType& key,
+        bool peek) -> std::optional<std::pair<ValueType, size_t>>;
 
     auto doAccess(
         Element& element) -> void;
@@ -183,17 +199,15 @@ private:
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
 
-    /// The main store for the key value pairs and metadata for each element.
-    std::vector<Element> m_elements;
+    /// The open list of un-used slots in 'm_elements'.
+    std::list<Element> m_open_list;
+    /// The end of the open list to pull open slots from.
+    typename std::list<Element>::iterator m_open_list_end;
     /// The keyed lookup data structure, the value is the index into 'm_elements'.
-    std::unordered_map<KeyType, size_t> m_keyed_elements;
+    std::unordered_map<KeyType, OpenListIterator> m_keyed_elements;
     /// The lfu sorted map, the key is the number of times the element has been used,
     /// the value is the index into 'm_elements'.
-    std::multimap<size_t, size_t> m_lfu_list;
-    /// The open list of un-used slots in 'm_elements'.
-    std::list<size_t> m_open_list;
-    /// The end of the open list to pull open slots from.
-    std::list<size_t>::iterator m_open_list_end;
+    std::multimap<size_t, OpenListIterator> m_lfu_list;
 };
 
 } // namespace cappuccino

@@ -125,7 +125,7 @@ public:
         bool peek = false) -> std::optional<ValueType>;
 
     /**
-     * Attempts to find the given key's value.
+     * Attempts to find the given key's value and use count.
      * @param key The key to lookup its value.
      * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
