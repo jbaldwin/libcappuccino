@@ -3,51 +3,41 @@
 #include "cappuccino/SyncImplEnum.h"
 
 #include <list>
-#include <map>
 #include <mutex>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
 namespace cappuccino {
 
 /**
- * Least Frequently Used (LFU) Cache.
- * Each key value pair is evicted based on being the least frequently used, and no other
+ * First In First Out (FIFO) Cache.
+ * Each key value pair is evicted based on being the first in first out policy, and no other
  * criteria.
  *
  * This cache is sync aware and can be used concurrently from multiple threads safely.
  * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
  *
- * @tparam KeyType The key type.  Must support std::hash() and operator<().
+ * @tparam KeyType The key type.  Must support std::hash().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
  * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
-class LfuCache {
+class FifoCache {
 private:
-    using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+    struct Element;
+
+    using FifoIterator = typename std::list<Element>::iterator;
+    using KeyedIterator = typename std::unordered_map<KeyType, FifoIterator>::iterator;
 
 public:
-    struct KeyValue {
-        KeyValue(
-            KeyType key,
-            ValueType value)
-            : m_key(std::move(key))
-            , m_value(std::move(value))
-        {
-        }
-
-        KeyType m_key;
-        ValueType m_value;
-    };
-
     /**
      * @param capacity The maximum number of key value pairs allowed in the cache.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit LfuCache(
+    explicit FifoCache(
         size_t capacity,
         float max_load_factor = 1.0f);
 
@@ -93,24 +83,20 @@ public:
     /**
      * Attempts to find the given key's value.
      * @param key The key to lookup its value.
-     * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
     auto Find(
-        const KeyType& key,
-        bool peek = false) -> std::optional<ValueType>;
+        const KeyType& key) -> std::optional<ValueType>;
 
     /**
      * Attempts to find all the given keys values.
      * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
      * @param key_range The keys to lookup their pairs.
-     * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
     template <typename RangeType>
     auto FindRange(
-        const RangeType& key_range,
-        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+        const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -127,8 +113,7 @@ public:
      */
     template <typename RangeType>
     auto FindRangeFill(
-        RangeType& key_optional_value_range,
-        bool peek = false) -> void;
+        RangeType& key_optional_value_range) -> void;
 
     /**
      * @return The number of elements inside the cache.
@@ -143,12 +128,9 @@ public:
 
 private:
     struct Element {
-        /// The iterator into the keyed data structure.
-        KeyedIterator m_keyed_position;
-        /// The iterator into the lfu data structure.
-        std::multimap<size_t, size_t>::iterator m_lfu_position;
-        /// The iterator into the open list data structure.
-        std::list<size_t>::iterator m_open_list_position;
+        /// The iterator into the keyed data structure, when the cache starts
+        /// none of the keyed iterators are set, but also deletes can unset this optional.
+        std::optional<KeyedIterator> m_keyed_position;
         /// The element's value.
         ValueType m_value;
     };
@@ -166,16 +148,10 @@ private:
         ValueType&& value) -> void;
 
     auto doDelete(
-        size_t element_idx) -> void;
+        FifoIterator fifo_position) -> void;
 
     auto doFind(
-        const KeyType& key,
-        bool peek) -> std::optional<ValueType>;
-
-    auto doAccess(
-        Element& element) -> void;
-
-    auto doPrune() -> void;
+        const KeyType& key) -> std::optional<ValueType>;
 
     /// Cache lock for all mutations if sync is enabled.
     std::mutex m_lock;
@@ -183,19 +159,12 @@ private:
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
 
-    /// The main store for the key value pairs and metadata for each element.
-    std::vector<Element> m_elements;
+    /// The ordering of first in-first out queue of elements.
+    std::list<Element> m_fifo_list;
     /// The keyed lookup data structure, the value is the index into 'm_elements'.
-    std::unordered_map<KeyType, size_t> m_keyed_elements;
-    /// The lfu sorted map, the key is the number of times the element has been used,
-    /// the value is the index into 'm_elements'.
-    std::multimap<size_t, size_t> m_lfu_list;
-    /// The open list of un-used slots in 'm_elements'.
-    std::list<size_t> m_open_list;
-    /// The end of the open list to pull open slots from.
-    std::list<size_t>::iterator m_open_list_end;
+    std::unordered_map<KeyType, FifoIterator> m_keyed_elements;
 };
 
 } // namespace cappuccino
 
-#include "cappuccino/LfuCache.tcc"
+#include "cappuccino/FifoCache.tcc"

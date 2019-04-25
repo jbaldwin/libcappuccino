@@ -1,6 +1,5 @@
 #include "cappuccino/LfudaCache.h"
-
-#include <numeric>
+#include "cappuccino/LockScopeGuard.h"
 
 namespace cappuccino {
 
