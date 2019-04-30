@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cappuccino/SyncImplEnum.h"
+#include "cappuccino/CappuccinoLock.h"
 
 #include <list>
 #include <mutex>
@@ -173,7 +174,7 @@ private:
     auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
-    std::mutex m_lock;
+    CappuccinoLock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };

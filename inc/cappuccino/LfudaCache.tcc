@@ -1,5 +1,4 @@
 #include "cappuccino/LfudaCache.h"
-#include "cappuccino/LockScopeGuard.h"
 
 namespace cappuccino {
 
@@ -35,7 +34,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::Insert(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     doInsertUpdate(key, std::move(value), now);
 }
 
@@ -46,7 +45,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::InsertRange(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& [key, value] : key_value_range) {
         doInsertUpdate(key, std::move(value), now);
     }
@@ -56,7 +55,7 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         doDelete(keyed_position->second);
@@ -73,7 +72,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::DeleteRange(
 {
     size_t deleted_elements { 0 };
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& key : key_range) {
         auto keyed_position = m_keyed_elements.find(key);
         if (keyed_position != m_keyed_elements.end()) {
@@ -92,7 +91,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::Find(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     return doFind(key, peek, now);
 }
 
@@ -103,7 +102,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindWithUseCount(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     return doFindWithUseCount(key, peek, now);
 }
 
@@ -119,7 +118,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(
     output.reserve(std::size(key_range));
 
     {
-        LockScopeGuard<SyncType> guard { m_lock };
+        std::lock_guard guard { m_lock };
         for (auto& key : key_range) {
             output.emplace_back(key, doFind(key, peek, now));
         }
@@ -136,7 +135,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindRangeFill(
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
         optional_value = doFind(key, peek, now);
     }
@@ -147,7 +146,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::DynamicallyAge() -> size_t
 {
     auto now = std::chrono::steady_clock::now();
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     return doDynamicAge(now);
 }
 

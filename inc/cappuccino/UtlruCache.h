@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cappuccino/SyncImplEnum.h"
+#include "cappuccino/CappuccinoLock.h"
 
 #include <chrono>
 #include <list>
@@ -205,7 +206,7 @@ private:
         std::chrono::steady_clock::time_point now) -> void;
 
     /// Cache lock for all mutations.
-    std::mutex m_lock;
+    CappuccinoLock<SyncType> m_lock;
 
     /// The uniform TTL for every key value pair inserted into the cache.
     std::chrono::seconds m_ttl;

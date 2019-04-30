@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cappuccino/SyncImplEnum.h"
+#include "cappuccino/CappuccinoLock.h"
 
 #include <mutex>
 #include <random>
@@ -161,7 +162,7 @@ private:
     auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
-    std::mutex m_lock;
+    CappuccinoLock<SyncType> m_lock;
 
     /// The main store for the key value pairs and metadata for each element.
     std::vector<Element> m_elements;

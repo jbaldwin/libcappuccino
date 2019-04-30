@@ -1,5 +1,4 @@
 #include "cappuccino/LfuCache.h"
-#include "cappuccino/LockScopeGuard.h"
 
 namespace cappuccino {
 
@@ -19,7 +18,7 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key, ValueType value) -> void
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     doInsertUpdate(key, std::move(value));
 }
 
@@ -28,7 +27,7 @@ template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType&& key_value_range) -> void
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& [key, value] : key_value_range) {
         doInsertUpdate(key, std::move(value));
     }
@@ -38,7 +37,7 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         doDelete(keyed_position->second);
@@ -55,7 +54,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
 {
     size_t deleted_elements { 0 };
 
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& key : key_range) {
         auto keyed_position = m_keyed_elements.find(key);
         if (keyed_position != m_keyed_elements.end()) {
@@ -71,7 +70,7 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Find(
     const KeyType& key, bool peek) -> std::optional<ValueType>
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     return doFind(key, peek);
 }
 
@@ -80,7 +79,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
     const KeyType& key,
     bool peek) -> std::optional<std::pair<ValueType, size_t>>
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     return doFindWithUseCount(key, peek);
 }
 
@@ -94,7 +93,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     output.reserve(std::size(key_range));
 
     {
-        LockScopeGuard<SyncType> guard { m_lock };
+        std::lock_guard guard { m_lock };
         for (auto& key : key_range) {
             output.emplace_back(key, doFind(key, peek));
         }
@@ -108,7 +107,7 @@ template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range, bool peek) -> void
 {
-    LockScopeGuard<SyncType> guard { m_lock };
+    std::lock_guard guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
         optional_value = doFind(key, peek);
     }
