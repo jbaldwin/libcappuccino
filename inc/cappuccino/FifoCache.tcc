@@ -1,5 +1,5 @@
-#include "cappuccino/FifoCache.h"
 #include "cappuccino/CappuccinoLock.h"
+#include "cappuccino/FifoCache.h"
 
 namespace cappuccino {
 
@@ -97,7 +97,8 @@ template <typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range) -> void
 {
-    std::lock_guard guard { m_lock };;
+    std::lock_guard guard { m_lock };
+    ;
     for (auto& [key, optional_value] : key_optional_value_range) {
         optional_value = doFind(key);
     }

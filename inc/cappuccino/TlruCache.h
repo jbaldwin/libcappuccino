@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/SyncImplEnum.h"
 #include "cappuccino/CappuccinoLock.h"
+#include "cappuccino/SyncImplEnum.h"
 
 #include <chrono>
 #include <list>

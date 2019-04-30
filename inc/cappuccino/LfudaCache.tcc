@@ -10,17 +10,8 @@ LfudaCache<KeyType, ValueType, SyncType>::LfudaCache(
     float max_load_factor)
     : m_dynamic_age_tick(dynamic_age_tick)
     , m_dynamic_age_ratio(dynamic_age_ratio)
-    , m_elements(capacity)
     , m_dynamic_age_list(capacity)
 {
-    // Fill out the DA list / open list with indexes into 'm_elements'.
-    auto now = std::chrono::steady_clock::now();
-    size_t idx { 0 };
-    for (auto& age_item : m_dynamic_age_list) {
-        age_item.first = idx;
-        age_item.second = now;
-        ++idx;
-    }
     m_open_list_end = m_dynamic_age_list.begin();
 
     m_keyed_elements.max_load_factor(max_load_factor);
@@ -153,7 +144,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::DynamicallyAge() -> size_t
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
-    return m_elements.size();
+    return m_dynamic_age_list.size();
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -182,22 +173,19 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doInsert(
     ValueType&& value,
     std::chrono::steady_clock::time_point now) -> void
 {
-    if (m_used_size >= m_elements.size()) {
+    if (m_used_size >= m_dynamic_age_list.size()) {
         doPrune(now);
     }
 
-    auto element_idx = m_open_list_end->first;
+    Element& element = *m_open_list_end;
 
-    auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
-    auto lfu_position = m_lfu_list.emplace(1, element_idx);
+    auto keyed_position = m_keyed_elements.emplace(key, m_open_list_end).first;
+    auto lfu_position = m_lfu_list.emplace(1, m_open_list_end);
 
-    m_open_list_end->second = now;
-
-    Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
     element.m_keyed_position = keyed_position;
     element.m_lfu_position = lfu_position;
-    element.m_dynamic_age_position = m_open_list_end;
+    element.m_dynamic_age = now;
 
     ++m_open_list_end;
 
@@ -210,7 +198,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doUpdate(
     ValueType&& value,
     std::chrono::steady_clock::time_point now) -> void
 {
-    Element& element = m_elements[keyed_position->second];
+    Element& element = *keyed_position->second;
     element.m_value = std::move(value);
 
     doAccess(element, now);
@@ -218,12 +206,12 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doUpdate(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doDelete(
-    size_t element_idx) -> void
+    AgeIterator age_iterator) -> void
 {
-    Element& element = m_elements[element_idx];
+    Element& element = *age_iterator;
 
-    if (element.m_dynamic_age_position != std::prev(m_open_list_end)) {
-        m_dynamic_age_list.splice(m_open_list_end, m_dynamic_age_list, element.m_dynamic_age_position);
+    if (age_iterator != std::prev(m_open_list_end)) {
+        m_dynamic_age_list.splice(m_open_list_end, m_dynamic_age_list, age_iterator);
     }
     --m_open_list_end;
 
@@ -241,8 +229,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doFind(
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        size_t element_idx = keyed_position->second;
-        Element& element = m_elements[element_idx];
+        Element& element = *keyed_position->second;
         if (!peek) {
             doAccess(element, now);
         }
@@ -260,8 +247,7 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        size_t element_idx = keyed_position->second;
-        Element& element = m_elements[element_idx];
+        Element& element = *keyed_position->second;
         if (!peek) {
             doAccess(element, now);
         }
@@ -284,10 +270,10 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doAccess(
     // Update dynamic aging position.
     auto last_aged_item = std::prev(m_open_list_end);
     // swap to the end of the aged list and update its time.
-    if (element.m_dynamic_age_position != last_aged_item) {
-        m_dynamic_age_list.splice(last_aged_item, m_dynamic_age_list, element.m_dynamic_age_position);
+    if (element.m_keyed_position->second != last_aged_item) {
+        m_dynamic_age_list.splice(last_aged_item, m_dynamic_age_list, element.m_keyed_position->second);
     }
-    element.m_dynamic_age_position->second = now;
+    element.m_dynamic_age = now;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -311,21 +297,21 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doDynamicAge(
     // For all items in the DA list that are old enough and in use, DA them!
     auto da_start = m_dynamic_age_list.begin();
     auto da_last = m_open_list_end; // need the item previous to the end to splice properly
-    while (da_start != m_open_list_end && da_start->second + m_dynamic_age_tick < now) {
+    while (da_start != m_open_list_end && (*da_start).m_dynamic_age + m_dynamic_age_tick < now) {
         // swap to after the last item (if it isn't the last item..)
         if (da_start != da_last) {
             m_dynamic_age_list.splice(da_last, m_dynamic_age_list, da_start);
         }
-        // Update its dynamic age time to now.
-        da_start->second = now;
 
+        // Update its dynamic age time to now.
+        Element& element = *da_start;
+        element.m_dynamic_age = now;
         // Now *= ratio its use count to actually age it.  This requires
         // deleting from and re-inserting into the lfu data structure.
-        Element& element = m_elements[da_start->first];
         size_t use_count = element.m_lfu_position->first;
         m_lfu_list.erase(element.m_lfu_position);
         use_count *= m_dynamic_age_ratio;
-        m_lfu_list.emplace(use_count, da_start->first);
+        m_lfu_list.emplace(use_count, da_start);
 
         // The last item is now this item!  This will maintain the insertion order.
         da_last = da_start;

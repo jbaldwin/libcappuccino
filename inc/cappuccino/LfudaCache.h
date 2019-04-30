@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/LfuCache.h"
 #include "cappuccino/CappuccinoLock.h"
+#include "cappuccino/LfuCache.h"
 
 #include <chrono>
 #include <list>
@@ -33,10 +33,10 @@ namespace cappuccino {
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
 class LfudaCache {
 private:
-    using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+    struct Element;
 
-    /// The first item is the 'm_elements' index, the second is when the item was last touched.
-    using AgeIterator = std::list<std::pair<size_t, std::chrono::steady_clock::time_point>>::iterator;
+    using AgeIterator = typename std::list<Element>::iterator;
+    using KeyedIterator = typename std::unordered_map<KeyType, AgeIterator>::iterator;
 
 public:
     struct KeyValue {
@@ -190,9 +190,9 @@ private:
         /// The iterator into the keyed data structure.
         KeyedIterator m_keyed_position;
         /// The iterator into the lfu data structure.
-        std::multimap<size_t, size_t>::iterator m_lfu_position;
-        /// The iterator into the dynamic age data structure.
-        AgeIterator m_dynamic_age_position;
+        typename std::multimap<size_t, AgeIterator>::iterator m_lfu_position;
+        /// The dynamic age timestamp.
+        std::chrono::steady_clock::time_point m_dynamic_age;
         /// The element's value.
         ValueType m_value;
     };
@@ -213,7 +213,7 @@ private:
         std::chrono::steady_clock::time_point now) -> void;
 
     auto doDelete(
-        size_t element_idx) -> void;
+        AgeIterator age_iterator) -> void;
 
     auto doFind(
         const KeyType& key,
@@ -246,15 +246,13 @@ private:
     /// The ratio amount of 'uses' to remove when an element dynamically ages.
     float m_dynamic_age_ratio { 0.5f };
 
-    /// The main store for the key value pairs and metadata for each element.
-    std::vector<Element> m_elements;
     /// The keyed lookup data structure, the value is the index into 'm_elements'.
-    std::unordered_map<KeyType, size_t> m_keyed_elements;
+    std::unordered_map<KeyType, AgeIterator> m_keyed_elements;
     /// The lfu sorted map, the key is the number of times the element has been used,
     /// the value is the index into 'm_elements'.
-    std::multimap<size_t, size_t> m_lfu_list;
+    std::multimap<size_t, AgeIterator> m_lfu_list;
     /// The dynamic age list, this also contains a partition on un-used 'm_elements'.
-    std::list<std::pair<size_t, std::chrono::steady_clock::time_point>> m_dynamic_age_list;
+    std::list<Element> m_dynamic_age_list;
     /// The end of the open list to pull open slots from.
     AgeIterator m_open_list_end;
 };

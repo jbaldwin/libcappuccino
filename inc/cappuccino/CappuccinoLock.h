@@ -14,9 +14,8 @@ namespace cappuccino {
  * @tparam SyncType The sync type to use.
  * @tparam LockType The underlying lock type to use.  Must support .lock() and .unlock().
  */
-template<SyncImplEnum SyncType, typename LockType = std::mutex>
-class CappuccinoLock
-{
+template <SyncImplEnum SyncType, typename LockType = std::mutex>
+class CappuccinoLock {
 public:
     CappuccinoLock() = default;
 
