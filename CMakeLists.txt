@@ -37,5 +37,9 @@ if(UNIX)
     )
 endif()
 
-include(examples/CMakeLists.txt)
+# TODO?
+#include(examples/CMakeLists.txt)
 
+IF(${COMPILE_TESTS})
+    add_subdirectory(test)
+ENDIF()

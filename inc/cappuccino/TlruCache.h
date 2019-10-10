@@ -160,7 +160,7 @@ private:
         /// The iterator into the lru data structure.
         std::list<size_t>::iterator m_lru_position;
         /// The iterator into the ttl data structure.
-        std::map<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
+        std::multimap<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
         /// The element's value.
         ValueType m_value;
     };
