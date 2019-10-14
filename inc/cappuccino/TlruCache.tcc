@@ -24,13 +24,13 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::Insert(
     std::chrono::seconds ttl,
     const KeyType& key,
-    ValueType value) -> void
+    ValueType value) -> bool
 {
     auto now = std::chrono::steady_clock::now();
     auto expire_time = now + ttl;
 
     LockScopeGuard<SyncType> guard { m_lock };
-    doInsertUpdate(key, std::move(value), now, expire_time);
+    return doInsertUpdate(key, std::move(value), now, expire_time);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -159,18 +159,28 @@ auto TlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value,
     std::chrono::steady_clock::time_point now,
-    std::chrono::steady_clock::time_point expire_time) -> void
+    std::chrono::steady_clock::time_point expire_time) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
         // If the key already exists this is an update, this won't require a prune.
-        doUpdate(keyed_position, std::move(value), expire_time);
+
+        // Check whether expired
+        const size_t element_idx = keyed_position->second;
+        const bool expired = (now >= m_elements[element_idx].m_expire_time);
+
+        Element& element = doUpdate(keyed_position, expire_time);
+        if (expired)
+            element.m_value = std::move(value);
+
+        return expired;
     } else {
         // Inserts might require an item to be pruned, check that first before inserting the new key/value.
         if (m_used_size >= m_elements.size()) {
             doPrune(now);
         }
         doInsert(key, std::move(value), expire_time);
+        return true;
     }
 }
 
@@ -206,8 +216,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::doInsert(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::doUpdate(
     typename std::unordered_map<KeyType, size_t>::iterator keyed_position,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point expire_time) -> void
+    std::chrono::steady_clock::time_point expire_time) -> Element&
 {
     size_t element_idx = keyed_position->second;
 
@@ -219,6 +228,7 @@ auto TlruCache<KeyType, ValueType, SyncType>::doUpdate(
     element.m_ttl_position = m_ttl_list.emplace(expire_time, element_idx);
 
     doAccess(element);
+    return element;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>

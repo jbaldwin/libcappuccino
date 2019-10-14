@@ -59,11 +59,12 @@ public:
      * @param ttl The TTL for this key value pair.
      * @param key The key to store the value under.
      * @param value The value of data to store.
+     * @return  True if new key inserted (was not found or expired), False if key already present (and not expired)
      */
     auto Insert(
         std::chrono::seconds ttl,
         const KeyType& key,
-        ValueType value) -> void;
+        ValueType value) -> bool;
 
     /**
      * Inserts or updates a range of key values pairs with their given TTL.  This expects a container
@@ -169,7 +170,7 @@ private:
         const KeyType& key,
         ValueType&& value,
         std::chrono::steady_clock::time_point now,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -178,8 +179,7 @@ private:
 
     auto doUpdate(
         typename std::unordered_map<KeyType, size_t>::iterator keyed_position,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time) -> Element&;
 
     auto doDelete(
         size_t element_idx) -> void;

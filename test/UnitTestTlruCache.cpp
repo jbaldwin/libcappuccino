@@ -8,9 +8,7 @@
 #pragma clang diagnostic ignored "-Wexit-time-destructors"
 #pragma clang diagnostic ignored "-Wfloat-equal"
 
-namespace spotx
-{
-namespace collections
+namespace cappuccino
 {
 namespace test
 {
@@ -54,15 +52,13 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
     GIVEN("A filled TlruCache of 5 doubles with 1s TTL")
     {
         std::chrono::seconds ttl{1};
-        cappuccino::TlruCache<std::string, double> cache{5};
+        using CacheType = cappuccino::TlruCache<std::string, double>;
+        CacheType cache{5};
 
-        auto insert_vals = std::vector<std::pair<std::string, double>>{
-            {{"one", 1.0}, {"two", 2.0}, {"three", 3.0}, {"pi", 3.14159}, {"four", 4.0}}};
+        auto insert_vals = std::vector<CacheType::KeyValue>{
+            {{ttl, "one", 1.0}, {ttl, "two", 2.0}, {ttl, "three", 3.0}, {ttl, "pi", 3.14159}, {ttl, "four", 4.0}}};
 
-        // TODO?
-        //cache.Insert(ttl, insert_vals);
-        for (const auto& v : insert_vals)
-            cache.Insert(ttl, v.first, v.second);
+        cache.InsertRange(insert_vals);
 
         WHEN("We request an item we have inserted in the cache")
         {
@@ -130,11 +126,10 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
 
         WHEN("We try to insert a value already in the cache")
         {
-            cache.Insert(ttl, "persist", 1.0);
+            bool first_insert = cache.Insert(ttl, "persist", 1.0);
             auto first_access = cache.Find("persist");
-            //bool test_ret_val = cache.Insert(ttl, "persist", 1337.1337);
-            bool test_ret_val = false;
-            cache.Insert(ttl, "persist", 1337.1337);
+            bool test_ret_val1 = cache.Insert(ttl, "persist", 1337.1337);
+            bool test_ret_val2 = cache.Insert(ttl, "persist", 1337.1337);
 
             WHEN("We retrieve the value at that key")
             {
@@ -142,54 +137,48 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
 
                 THEN("We expect the value was NOT changed")
                 {
+                    REQUIRE(first_insert);
                     REQUIRE(first_access);
                     REQUIRE(first_access == 1.0);
-                    REQUIRE_FALSE(test_ret_val); // no insert happened.
+                    REQUIRE_FALSE(test_ret_val1); // no insert happened.
+                    REQUIRE_FALSE(test_ret_val2); // no insert happened.
                     REQUIRE(val_persist);
                     REQUIRE(val_persist.value() == 1.0);
                 }
             }
         }
 
-        // TODO?
-        /*WHEN("We try to retrive multiple values at the same time")
+        WHEN("We try to retrive multiple values at the same time")
         {
-            auto fill_range = std::vector<std::pair<std::string, Optional<double>>>{};
+            auto keys = std::vector<std::string>{"one", "two", "three", "pi", "four", "unknown"};
 
-            fill_range.resize(5);
-
-            // optionals all default to nullopt
-            fill_range[0].first = "one";
-            fill_range[1].first = "two";
-            fill_range[2].first = "three";
-            fill_range[3].first = "pi";
-            fill_range[4].first = "four";
-
-            cache.FillRange(fill_range);
+            auto result_map = cache.FindRange(keys);
 
             THEN("We expect all values to be retrived properly")
             {
-                REQUIRE(fill_range[0].second);
-                REQUIRE(fill_range[0].second.value() == 1.0);
+                auto iter = result_map.find("one");
+                REQUIRE((iter != result_map.end() && iter->second.value() == 1.0));
 
-                REQUIRE(fill_range[1].second);
-                REQUIRE(fill_range[1].second.value() == 2.0);
+                iter = result_map.find("two");
+                REQUIRE((iter != result_map.end() && iter->second.value() == 2.0));
 
-                REQUIRE(fill_range[2].second);
-                REQUIRE(fill_range[2].second.value() == 3.0);
+                iter = result_map.find("three");
+                REQUIRE((iter != result_map.end() && iter->second.value() == 3.0));
 
-                REQUIRE(fill_range[3].second);
-                REQUIRE(fill_range[3].second.value() == 3.14159);
+                iter = result_map.find("pi");
+                REQUIRE((iter != result_map.end() && iter->second.value() == 3.14159));
 
-                REQUIRE(fill_range[4].second);
-                REQUIRE(fill_range[4].second.value() == 4.0);
+                iter = result_map.find("four");
+                REQUIRE((iter != result_map.end() && iter->second.value() == 4.0));
+
+                iter = result_map.find("unknown");
+                REQUIRE((iter != result_map.end() && !iter->second.has_value()));
             }
-        }*/
+        }
     }
 }
 
 } // namespace test
-} // namespace collections
-} // namespace spotx
+} // namespace cappuccino
 
 #pragma clang diagnostic pop

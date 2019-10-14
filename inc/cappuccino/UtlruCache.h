@@ -63,7 +63,7 @@ public:
      */
     auto Insert(
         const KeyType& key,
-        ValueType value) -> void;
+        ValueType value) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container that has
@@ -178,7 +178,7 @@ private:
         const KeyType& key,
         ValueType&& value,
         std::chrono::steady_clock::time_point now,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -187,8 +187,7 @@ private:
 
     auto doUpdate(
         KeyedIterator keyed_position,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time) -> Element&;
 
     auto doDelete(
         size_t element_idx) -> void;
