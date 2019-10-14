@@ -152,27 +152,18 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
         {
             auto keys = std::vector<std::string>{"one", "two", "three", "pi", "four", "unknown"};
 
-            auto result_map = cache.FindRange(keys);
+            auto result_list = cache.FindRange(keys);
 
             THEN("We expect all values to be retrived properly")
             {
-                auto iter = result_map.find("one");
-                REQUIRE((iter != result_map.end() && iter->second.value() == 1.0));
-
-                iter = result_map.find("two");
-                REQUIRE((iter != result_map.end() && iter->second.value() == 2.0));
-
-                iter = result_map.find("three");
-                REQUIRE((iter != result_map.end() && iter->second.value() == 3.0));
-
-                iter = result_map.find("pi");
-                REQUIRE((iter != result_map.end() && iter->second.value() == 3.14159));
-
-                iter = result_map.find("four");
-                REQUIRE((iter != result_map.end() && iter->second.value() == 4.0));
-
-                iter = result_map.find("unknown");
-                REQUIRE((iter != result_map.end() && !iter->second.has_value()));
+                REQUIRE(result_list.size() == keys.size());
+                
+                REQUIRE(result_list[0].second.value() == 1.0);
+                REQUIRE(result_list[1].second.value() == 2.0);
+                REQUIRE(result_list[2].second.value() == 3.0);
+                REQUIRE(result_list[3].second.value() == 3.14159);
+                REQUIRE(result_list[4].second.value() == 4.0);
+                REQUIRE(!result_list[5].second.has_value());
             }
         }
     }
