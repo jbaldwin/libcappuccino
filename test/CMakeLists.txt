@@ -13,7 +13,5 @@ enable_testing()
 add_executable(${PROJECT_NAME} ${SOURCE_FILES_LIB_CAPPUCCINO_TEST})
 add_test(LibCappuccinoTest ${EXECUTABLE_OUTPUT_PATH}${PROJECT_NAME})
 
-include(${MAKEDIR}/opt/libcappuccino/LibCappuccinoLink.cmake)
-
-# System libraries
+target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../inc)
 target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
