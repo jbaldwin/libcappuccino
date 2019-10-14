@@ -1,27 +1,22 @@
-#include "cappuccino/MruCache.h"
-
-#include <numeric>
+#include "cappuccino/LfuCache.h"
 
 namespace cappuccino {
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-MruCache<KeyType, ValueType, SyncType>::MruCache(
+LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     size_t capacity,
     float max_load_factor)
-    : m_elements(capacity)
-    , m_mru_list(capacity)
+    : m_open_list(capacity)
 {
-    std::iota(m_mru_list.begin(), m_mru_list.end(), 0);
-    m_mru_end = m_mru_list.begin();
+    m_open_list_end = m_open_list.begin();
 
     m_keyed_elements.max_load_factor(max_load_factor);
     m_keyed_elements.reserve(capacity);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Insert(
-    const KeyType& key,
-    ValueType value) -> void
+auto LfuCache<KeyType, ValueType, SyncType>::Insert(
+    const KeyType& key, ValueType value) -> void
 {
     std::lock_guard guard { m_lock };
     doInsertUpdate(key, std::move(value));
@@ -29,7 +24,7 @@ auto MruCache<KeyType, ValueType, SyncType>::Insert(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::InsertRange(
+auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType&& key_value_range) -> void
 {
     std::lock_guard guard { m_lock };
@@ -39,7 +34,7 @@ auto MruCache<KeyType, ValueType, SyncType>::InsertRange(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Delete(
+auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
     std::lock_guard guard { m_lock };
@@ -54,7 +49,7 @@ auto MruCache<KeyType, ValueType, SyncType>::Delete(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <template <class...> typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::DeleteRange(
+auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
 {
     size_t deleted_elements { 0 };
@@ -69,20 +64,28 @@ auto MruCache<KeyType, ValueType, SyncType>::DeleteRange(
     }
 
     return deleted_elements;
-};
+}
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key,
-    bool peek) -> std::optional<ValueType>
+auto LfuCache<KeyType, ValueType, SyncType>::Find(
+    const KeyType& key, bool peek) -> std::optional<ValueType>
 {
     std::lock_guard guard { m_lock };
     return doFind(key, peek);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
+    const KeyType& key,
+    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+{
+    std::lock_guard guard { m_lock };
+    return doFindWithUseCount(key, peek);
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::FindRange(
+auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
     bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
@@ -101,9 +104,8 @@ auto MruCache<KeyType, ValueType, SyncType>::FindRange(
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
-auto MruCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType& key_optional_value_range,
-    bool peek) -> void
+auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
+    RangeType& key_optional_value_range, bool peek) -> void
 {
     std::lock_guard guard { m_lock };
     for (auto& [key, optional_value] : key_optional_value_range) {
@@ -112,19 +114,19 @@ auto MruCache<KeyType, ValueType, SyncType>::FindRangeFill(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
+auto LfuCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
 {
     return m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
+auto LfuCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
 {
-    return m_elements.size();
+    return m_open_list.size();
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
+auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value) -> void
 {
@@ -137,68 +139,65 @@ auto MruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doInsert(
+auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
 {
-    if (m_used_size >= m_elements.size()) {
+    if (m_used_size >= m_open_list.size()) {
         doPrune();
     }
 
-    auto element_idx = *m_mru_end;
+    Element& element = *m_open_list_end;
 
-    auto keyed_position = m_keyed_elements.emplace(key, element_idx).first;
+    auto keyed_position = m_keyed_elements.emplace(key, m_open_list_end).first;
+    auto lfu_position = m_lfu_list.emplace(1, m_open_list_end);
 
-    Element& element = m_elements[element_idx];
     element.m_value = std::move(value);
-    element.m_mru_position = m_mru_end;
     element.m_keyed_position = keyed_position;
+    element.m_lfu_position = lfu_position;
 
-    ++m_mru_end;
+    ++m_open_list_end;
 
     ++m_used_size;
-
-    // Don't need to call doAccess() since this element is at the most recently used end already.
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doUpdate(
-    MruCache::KeyedIterator keyed_position,
+auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
+    LfuCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
 {
-    Element& element = m_elements[keyed_position->second];
+    Element& element = *keyed_position->second;
     element.m_value = std::move(value);
 
-    // Move to most recently used end.
     doAccess(element);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doDelete(
-    size_t element_idx) -> void
+auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
+    OpenListIterator open_list_position) -> void
 {
-    Element& element = m_elements[element_idx];
+    Element& element = *open_list_position;
 
-    if (element.m_mru_position != std::prev(m_mru_end)) {
-        m_mru_list.splice(m_mru_end, m_mru_list, element.m_mru_position);
+    if (open_list_position != std::prev(m_open_list_end)) {
+        m_open_list.splice(m_open_list_end, m_open_list, open_list_position);
     }
-    --m_mru_end;
+    --m_open_list_end;
 
     m_keyed_elements.erase(element.m_keyed_position);
+    m_lfu_list.erase(element.m_lfu_position);
 
     --m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doFind(
+auto LfuCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key,
     bool peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        size_t element_idx = keyed_position->second;
-        Element& element = m_elements[element_idx];
-        // Do not update the mru access if peeking.
+        Element& element = *keyed_position->second;
+        // Don't update the elements access in the LRU if peeking.
         if (!peek) {
             doAccess(element);
         }
@@ -209,19 +208,37 @@ auto MruCache<KeyType, ValueType, SyncType>::doFind(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doAccess(
-    Element& element) -> void
+auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
+    const KeyType& key,
+    bool peek) -> std::optional<std::pair<ValueType, size_t>>
 {
-    // The the accessed item at the end of th MRU list, the end is the most recently
-    // used, the beginning is the least recently used.
-    m_mru_list.splice(m_mru_end, m_mru_list, element.m_mru_position);
+    auto keyed_position = m_keyed_elements.find(key);
+    if (keyed_position != m_keyed_elements.end()) {
+        Element& element = *keyed_position->second;
+        // Don't update the elements access in the LRU if peeking.
+        if (!peek) {
+            doAccess(element);
+        }
+        return { std::make_pair(element.m_value, element.m_lfu_position->first) };
+    }
+
+    return {};
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto MruCache<KeyType, ValueType, SyncType>::doPrune() -> void
+auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
+    Element& element) -> void
+{
+    auto use_count = element.m_lfu_position->first;
+    m_lfu_list.erase(element.m_lfu_position);
+    element.m_lfu_position = m_lfu_list.emplace(use_count + 1, element.m_keyed_position->second);
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
     if (m_used_size > 0) {
-        doDelete(m_mru_list.back());
+        doDelete(m_lfu_list.begin()->second);
     }
 }
 

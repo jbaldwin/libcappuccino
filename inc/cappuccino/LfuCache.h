@@ -3,23 +3,20 @@
 #include "cappuccino/CappuccinoLock.h"
 #include "cappuccino/SyncImplEnum.h"
 
-#include <chrono>
 #include <list>
 #include <map>
 #include <mutex>
-#include <optional>
 #include <unordered_map>
 #include <vector>
 
 namespace cappuccino {
 
 /**
- * Time aware LRU (Least Recently Used) Cache.
- * Each key value pair is evicted based on an individual TTL (time to live)
- * and least recently used policy.  Expired key value pairs are evicted before
- * least recently used.
+ * Least Frequently Used (LFU) Cache.
+ * Each key value pair is evicted based on being the least frequently used, and no other
+ * criteria.
  *
- * This cache is sync aware by default and can be used concurrently from multiple threads safely.
+ * This cache is sync aware and can be used concurrently from multiple threads safely.
  * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
  *
  * @tparam KeyType The key type.  Must support std::hash() and operator<().
@@ -29,20 +26,24 @@ namespace cappuccino {
  *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
-class TlruCache {
+class LfuCache {
+private:
+    struct Element;
+
+    using OpenListIterator = typename std::list<Element>::iterator;
+    using LfuIterator = typename std::multimap<size_t, OpenListIterator>::iterator;
+    using KeyedIterator = typename std::unordered_map<KeyType, OpenListIterator>::iterator;
+
 public:
     struct KeyValue {
         KeyValue(
-            std::chrono::seconds ttl,
             KeyType key,
             ValueType value)
-            : m_ttl(ttl)
-            , m_key(std::move(key))
+            : m_key(std::move(key))
             , m_value(std::move(value))
         {
         }
 
-        std::chrono::seconds m_ttl;
         KeyType m_key;
         ValueType m_value;
     };
@@ -51,28 +52,25 @@ public:
      * @param capacity The maximum number of key value pairs allowed in the cache.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit TlruCache(
+    explicit LfuCache(
         size_t capacity,
         float max_load_factor = 1.0f);
 
     /**
-     * Inserts or updates the given key value pair with the new TTL.
-     * @param ttl The TTL for this key value pair.
+     * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
-     * @param value The value of data to store.
-     * @return  True if new key inserted (was not found or expired), False if key already present (and not expired)
+     * @param value The value of the data to store.
      */
     auto Insert(
-        std::chrono::seconds ttl,
         const KeyType& key,
-        ValueType value) -> bool;
+        ValueType value) -> void;
 
     /**
-     * Inserts or updates a range of key values pairs with their given TTL.  This expects a container
-     * that has 3 values in the {std::chrono::seconds, KeyType, ValueType} ordering.
-     * There is a simple struct provided on the TlruCache::KeyValue that can be put into
-     * any iterable container to satisfy this requirement.
-     * @tparam RangeType A container with three items, std::chrono::seconds, KeyType, ValueType.
+     * Inserts or updates a range of key value pairs.  This expects a container
+     * that has 2 values in the {KeyType, ValueType} ordering.
+     * There is a simple struct provided on the LfuCache::KeyValue that can be put
+     * into any iterable container to satisfy this requirement.
+     * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
      */
     template <typename RangeType>
@@ -81,7 +79,7 @@ public:
 
     /**
      * Attempts to delete the given key.
-     * @param key The key to remove from the lru cache.
+     * @param key The key to delete from the lru cache.
      * @return True if the key was deleted, false if the key does not exist.
      */
     auto Delete(
@@ -89,7 +87,7 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g. vector<k> or set<k>.
+     * @tparam RangeType A container with the set of keys to delete, e.g. vector<KeyType>, set<KeyType>.
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
@@ -100,12 +98,22 @@ public:
     /**
      * Attempts to find the given key's value.
      * @param key The key to lookup its value.
-     * @param peek Should the find act like all the item was not used?
+     * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
     auto Find(
         const KeyType& key,
         bool peek = false) -> std::optional<ValueType>;
+
+    /**
+     * Attempts to find the given key's value and use count.
+     * @param key The key to lookup its value.
+     * @param peek Should the find act like the item wasn't used?
+     * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
+     */
+    auto FindWithUseCount(
+        const KeyType& key,
+        bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -127,7 +135,8 @@ public:
      * appropriate values from the cache.
      *
      * @tparam RangeType A container with a pair of optional items,
-     *                   e.g. vector<pair<k, optional<v>>>, or map<k, optional<v>>.
+     *                   e.g. vector<pair<KeyType, optional<ValueType>>>
+     *                   or map<KeyType, optional<ValueType>>
      * @param key_optional_value_range The keys to optional values to fill out.
      * @param peek Should the find act like all the items were not used?
      */
@@ -142,59 +151,48 @@ public:
     auto GetUsedSize() const -> size_t;
 
     /**
-     * @return The maximum capacity of this cache.
+     * The maximum capacity of this cache.
+     * @return
      */
     auto GetCapacity() const -> size_t;
 
-    /**
-     * Trims the TTL list of items an expunges all expired elements.  This could be useful to use
-     * on downtime to make inserts faster if the cache is full by pruning TTL'ed elements.
-     * @return The number of elements pruned.
-     */
-    auto CleanExpiredValues() -> size_t;
-
 private:
     struct Element {
-        /// The point in time in which this element's value expires.
-        std::chrono::steady_clock::time_point m_expire_time;
         /// The iterator into the keyed data structure.
-        typename std::unordered_map<KeyType, size_t>::iterator m_keyed_position;
-        /// The iterator into the lru data structure.
-        std::list<size_t>::iterator m_lru_position;
-        /// The iterator into the ttl data structure.
-        std::multimap<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
+        KeyedIterator m_keyed_position;
+        /// The iterator into the lfu data structure.
+        LfuIterator m_lfu_position;
         /// The element's value.
         ValueType m_value;
     };
 
     auto doInsertUpdate(
         const KeyType& key,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point now,
-        std::chrono::steady_clock::time_point expire_time) -> bool;
+        ValueType&& value) -> void;
 
     auto doInsert(
         const KeyType& key,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        ValueType&& value) -> void;
 
     auto doUpdate(
-        typename std::unordered_map<KeyType, size_t>::iterator keyed_position,
-        std::chrono::steady_clock::time_point expire_time) -> Element&;
+        KeyedIterator keyed_position,
+        ValueType&& value) -> void;
 
     auto doDelete(
-        size_t element_idx) -> void;
+        OpenListIterator open_list_position) -> void;
 
     auto doFind(
         const KeyType& key,
-        std::chrono::steady_clock::time_point now,
         bool peek) -> std::optional<ValueType>;
+
+    auto doFindWithUseCount(
+        const KeyType& key,
+        bool peek) -> std::optional<std::pair<ValueType, size_t>>;
 
     auto doAccess(
         Element& element) -> void;
 
-    auto doPrune(
-        std::chrono::steady_clock::time_point now) -> void;
+    auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
     CappuccinoLock<SyncType> m_lock;
@@ -202,29 +200,17 @@ private:
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
 
-    /// The main store for the key value pairs and metadata for each element.
-    std::vector<Element> m_elements;
-
+    /// The open list of un-used slots in 'm_elements'.
+    std::list<Element> m_open_list;
+    /// The end of the open list to pull open slots from.
+    typename std::list<Element>::iterator m_open_list_end;
     /// The keyed lookup data structure, the value is the index into 'm_elements'.
-    std::unordered_map<KeyType, size_t> m_keyed_elements;
-    /// The lru sorted list, the value is the index into 'm_elements'.
-    std::list<size_t> m_lru_list;
-    /**
-     * The ttl sorted list, the value is the index into 'm_elements'.  Note that it is
-     * important to use a multimap as two threads could timestamp the same!
-     */
-    std::multimap<std::chrono::steady_clock::time_point, size_t> m_ttl_list;
-
-    /**
-     * The current end of the lru list.  This list is special in that it is pre-allocated
-     * for the capacity of the entire size of 'm_elements' and this iterator is used
-     * to denote how many items are in use.  Each item in this list is pre-assigned an index
-     * into 'm_elements' and never has that index changed, this is how open slots into
-     * 'm_elements' are determined when inserting a new Element.
-     */
-    std::list<size_t>::iterator m_lru_end;
+    std::unordered_map<KeyType, OpenListIterator> m_keyed_elements;
+    /// The lfu sorted map, the key is the number of times the element has been used,
+    /// the value is the index into 'm_elements'.
+    std::multimap<size_t, OpenListIterator> m_lfu_list;
 };
 
 } // namespace cappuccino
 
-#include "cappuccino/TlruCache.tcc"
+#include "cappuccino/LfuCache.tcc"

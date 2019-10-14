@@ -3,50 +3,42 @@
 #include "cappuccino/CappuccinoLock.h"
 #include "cappuccino/SyncImplEnum.h"
 
+#include <list>
 #include <mutex>
-#include <random>
+#include <optional>
 #include <unordered_map>
 #include <vector>
 
 namespace cappuccino {
 
 /**
- * Random Replacement (RR) Cache.
- * Each key value pair is evicted based upon a random eviction strategy.
+ * First In First Out (FIFO) Cache.
+ * Each key value pair is evicted based on being the first in first out policy, and no other
+ * criteria.
  *
  * This cache is sync aware and can be used concurrently from multiple threads safely.
- * To remove locks/synchronization used SyncImplEnum::UNSYNC when creating the cache.
+ * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
  *
  * @tparam KeyType The key type.  Must support std::hash().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam SyncType By default this cache is thread safe, can be disabled for caches
- *                  specific to a single thread.
+ * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
+ *                  to a single thread.
  */
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
-class RrCache {
+class FifoCache {
 private:
-    using KeyedIterator = typename std::unordered_map<KeyType, size_t>::iterator;
+    struct Element;
+
+    using FifoIterator = typename std::list<Element>::iterator;
+    using KeyedIterator = typename std::unordered_map<KeyType, FifoIterator>::iterator;
 
 public:
-    struct KeyValue {
-        KeyValue(
-            KeyType key,
-            ValueType value)
-            : m_key(std::move(key))
-            , m_value(std::move(value))
-        {
-        }
-
-        KeyType m_key;
-        ValueType m_value;
-    };
-
     /**
      * @param capacity The maximum number of key value pairs allowed in the cache.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit RrCache(
+    explicit FifoCache(
         size_t capacity,
         float max_load_factor = 1.0f);
 
@@ -62,7 +54,7 @@ public:
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
      * that has 2 values in the {KeyType, ValueType} ordering.
-     * There is a simple struct provided on the LruCache::KeyValue that can be put
+     * There is a simple struct provided on the LfuCache::KeyValue that can be put
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
@@ -118,6 +110,7 @@ public:
      *                   e.g. vector<pair<KeyType, optional<ValueType>>>
      *                   or map<KeyType, optional<ValueType>>
      * @param key_optional_value_range The keys to optional values to fill out.
+     * @param peek Should the find act like all the items were not used?
      */
     template <typename RangeType>
     auto FindRangeFill(
@@ -130,14 +123,16 @@ public:
 
     /**
      * The maximum capacity of this cache.
-     * @return Capacity
+     * @return
      */
     auto GetCapacity() const -> size_t;
 
 private:
     struct Element {
-        KeyedIterator m_keyed_position;
-        size_t m_open_list_position;
+        /// The iterator into the keyed data structure, when the cache starts
+        /// none of the keyed iterators are set, but also deletes can unset this optional.
+        std::optional<KeyedIterator> m_keyed_position;
+        /// The element's value.
         ValueType m_value;
     };
 
@@ -154,31 +149,23 @@ private:
         ValueType&& value) -> void;
 
     auto doDelete(
-        size_t element_idx) -> void;
+        FifoIterator fifo_position) -> void;
 
     auto doFind(
         const KeyType& key) -> std::optional<ValueType>;
 
-    auto doPrune() -> void;
-
     /// Cache lock for all mutations if sync is enabled.
     CappuccinoLock<SyncType> m_lock;
 
-    /// The main store for the key value pairs and metadata for each element.
-    std::vector<Element> m_elements;
-    /// The keyed lookup data structure, this value is the index into 'm_elements'.
-    std::unordered_map<KeyType, size_t> m_keyed_elements;
-    /// The open list of free elements to use, the value is the index into 'm_elements'.
-    std::vector<size_t> m_open_list;
-    /// This is the partition point in the m_open_list, it is also the number of items in the cache.
-    size_t m_open_list_end { 0 };
+    /// The current number of elements in the cache.
+    size_t m_used_size { 0 };
 
-    /// Random device to seed mt19937.
-    std::random_device m_random_device;
-    /// Random number generator for eviction policy.
-    std::mt19937 m_mt;
+    /// The ordering of first in-first out queue of elements.
+    std::list<Element> m_fifo_list;
+    /// The keyed lookup data structure, the value is the index into 'm_elements'.
+    std::unordered_map<KeyType, FifoIterator> m_keyed_elements;
 };
 
 } // namespace cappuccino
 
-#include "cappuccino/RrCache.tcc"
+#include "cappuccino/FifoCache.tcc"

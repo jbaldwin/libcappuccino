@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cappuccino/CappuccinoLock.h"
 #include "cappuccino/SyncImplEnum.h"
 
 #include <chrono>
@@ -115,7 +116,7 @@ public:
     template <typename RangeType>
     auto FindRange(
         const RangeType& key_range,
-        bool peek = false) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all given keys values.
@@ -204,19 +205,23 @@ private:
         std::chrono::steady_clock::time_point now) -> void;
 
     /// Cache lock for all mutations.
-    std::mutex m_lock;
+    CappuccinoLock<SyncType> m_lock;
 
     /// The uniform TTL for every key value pair inserted into the cache.
     std::chrono::seconds m_ttl;
 
+    /// The current number of elements in the cache.
     size_t m_used_size { 0 };
 
+    /// The main store for the key value pairs and metadata for each element.
     std::vector<Element> m_elements;
-
+    /// The keyed lookup data structure, the value is the index into 'm_elements'.
     std::unordered_map<KeyType, size_t> m_keyed_elements;
+    /// The lru sorted list from most recently used (head) to least recently used (tail).
     std::list<size_t> m_lru_list;
+    /// The uniform ttl sorted list.
     std::list<size_t> m_ttl_list;
-
+    /// The lru end/open list end.
     std::list<size_t>::iterator m_lru_end;
 };
 

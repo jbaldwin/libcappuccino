@@ -1,5 +1,6 @@
 #pragma once
 
+#include "cappuccino/CappuccinoLock.h"
 #include "cappuccino/SyncImplEnum.h"
 
 #include <list>
@@ -109,7 +110,7 @@ public:
     template <typename RangeType>
     auto FindRange(
         const RangeType& key_range,
-        bool peek = false) -> std::unordered_map<KeyType, std::optional<ValueType>>;
+        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attemps to find all the given keys values.
@@ -173,7 +174,7 @@ private:
     auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
-    std::mutex m_lock;
+    CappuccinoLock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
