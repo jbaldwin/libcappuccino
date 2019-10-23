@@ -16,18 +16,30 @@ SCENARIO("Test the TlruCache's insertion and deletion order.", "[cappuccino][tlr
 {
     GIVEN("A filled TlruCache of 5 doubles with 1s TTL")
     {
-        std::chrono::seconds ttl{1};
+        std::chrono::seconds                       ttl{1};
         cappuccino::TlruCache<std::string, double> cache{5};
 
-        cache.Insert(ttl, "one", 1.0); // first insert
-        cache.Insert(ttl, "two", 2.0);
-        cache.Insert(ttl, "three", 3.0);
-        cache.Insert(ttl, "four", 4.0);
-        cache.Insert(ttl, "five", 5.0); // last insert
+        bool inserted1 = cache.Insert(ttl, "one", 1.0); // first insert
+        bool inserted2 = cache.Insert(ttl, "two", 2.0);
+        bool inserted3 = cache.Insert(ttl, "three", 3.0);
+        bool inserted4 = cache.Insert(ttl, "four", 4.0);
+        bool inserted5 = cache.Insert(ttl, "five", 5.0); // last insert
+
+        WHEN("Values were inserted")
+        {
+            THEN("Insert() returns success")
+            {
+                REQUIRE(inserted1);
+                REQUIRE(inserted2);
+                REQUIRE(inserted3);
+                REQUIRE(inserted4);
+                REQUIRE(inserted5);
+            }
+        }
 
         WHEN("We try to add a 6th entry the first one entered should be deleted.")
         {
-            cache.Insert(ttl, "six", 6.0);
+            bool inserted6 = cache.Insert(ttl, "six", 6.0);
 
             auto val_one  = cache.Find("one");  // should be deleted
             auto val_five = cache.Find("five"); // should be there
@@ -35,6 +47,7 @@ SCENARIO("Test the TlruCache's insertion and deletion order.", "[cappuccino][tlr
 
             THEN("The first entry should be deleted")
             {
+                REQUIRE(inserted6);
                 REQUIRE_FALSE(val_one); // should be an empty optional.
 
                 REQUIRE(val_five.has_value());
@@ -47,12 +60,13 @@ SCENARIO("Test the TlruCache's insertion and deletion order.", "[cappuccino][tlr
     }
 }
 
-SCENARIO("The TlruCache can storage values in a limited space with both TTL and LRU disposal", "[cappuccino][tlrucache]")
+SCENARIO("The TlruCache can store values in a limited space with both TTL and LRU disposal", "[cappuccino][tlrucache]")
 {
+    using CacheType = cappuccino::TlruCache<std::string, double>;
+    std::chrono::seconds ttl{1};
+
     GIVEN("A filled TlruCache of 5 doubles with 1s TTL")
     {
-        std::chrono::seconds ttl{1};
-        using CacheType = cappuccino::TlruCache<std::string, double>;
         CacheType cache{5};
 
         auto insert_vals = std::vector<CacheType::KeyValue>{
@@ -77,8 +91,7 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
 
         WHEN("We wait 1s before reading the values")
         {
-            std::this_thread::sleep_for(
-                std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds{1}));
+            std::this_thread::sleep_for(ttl);
 
             auto val_two   = cache.Find("two");
             auto val_three = cache.Find("three");
@@ -100,13 +113,15 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
 
             WHEN("We insert a new value (beyond the limit)")
             {
-                cache.Insert(ttl, "five", 5.0);
+                bool insert = cache.Insert(ttl, "five", 5.0);
 
                 auto val_five = cache.Find("five");
                 auto val_pi   = cache.Find("pi");
 
                 THEN("We expect to be able to retrieve it, and the LRU to work properly")
                 {
+                    REQUIRE(insert);
+
                     REQUIRE(val_one);
                     REQUIRE(val_one.value() == 1.0);
                     REQUIRE(val_two);
@@ -126,16 +141,16 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
 
         WHEN("We try to insert a value already in the cache")
         {
-            bool first_insert = cache.Insert(ttl, "persist", 1.0);
-            auto first_access = cache.Find("persist");
+            bool first_insert  = cache.Insert(ttl, "persist", 1.0);
+            auto first_access  = cache.Find("persist");
             bool test_ret_val1 = cache.Insert(ttl, "persist", 1337.1337);
-            bool test_ret_val2 = cache.Insert(ttl, "persist", 1337.1337);
+            bool test_ret_val2 = cache.Insert(ttl, "persist", 1234.1234);
 
             WHEN("We retrieve the value at that key")
             {
                 auto val_persist = cache.Find("persist");
 
-                THEN("We expect the value was NOT changed")
+                THEN("We expect the value was updated")
                 {
                     REQUIRE(first_insert);
                     REQUIRE(first_access);
@@ -143,7 +158,7 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
                     REQUIRE_FALSE(test_ret_val1); // no insert happened.
                     REQUIRE_FALSE(test_ret_val2); // no insert happened.
                     REQUIRE(val_persist);
-                    REQUIRE(val_persist.value() == 1.0);
+                    REQUIRE(val_persist.value() == 1234.1234);
                 }
             }
         }
@@ -157,7 +172,7 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
             THEN("We expect all values to be retrived properly")
             {
                 REQUIRE(result_list.size() == keys.size());
-                
+
                 REQUIRE(result_list[0].second.value() == 1.0);
                 REQUIRE(result_list[1].second.value() == 2.0);
                 REQUIRE(result_list[2].second.value() == 3.0);
@@ -166,6 +181,48 @@ SCENARIO("The TlruCache can storage values in a limited space with both TTL and 
                 REQUIRE(!result_list[5].second.has_value());
             }
         }
+
+        WHEN("We insert an existing key, wait 1s, and try to insert the same key")
+        {
+            bool result1 = cache.Insert(ttl, "one", 12.3);
+
+            std::this_thread::sleep_for(ttl);
+
+            bool result2 = cache.Insert(ttl, "one", 45.6);
+
+            THEN("We expect the first insert to fail due to existing key, then the second to succeed on expired key")
+            {
+                REQUIRE_FALSE(result1);
+                REQUIRE(result2);
+            }
+        }
+    }
+
+    GIVEN("A non-full TlruCache using InsertOnly()")
+    {
+        CacheType cache{5};
+
+        WHEN("We insert keys in cache")
+        {
+            THEN("We expect first insert succeed and repeating the insert to fail")
+            {
+                REQUIRE(cache.InsertOnly(ttl, "one", 1.0));
+                REQUIRE_FALSE(cache.InsertOnly(ttl, "one", 2.0));
+                REQUIRE(cache.Find("one").value() == 1.0);
+            }
+        }
+
+       WHEN("We wait 1s for entry to expire")
+       {
+            std::this_thread::sleep_for(ttl);
+            
+            THEN("Repeating the insert succeeds again since it expired")
+            {
+                REQUIRE(cache.InsertOnly(ttl, "one", 2.0));
+                REQUIRE_FALSE(cache.InsertOnly(ttl, "one", 3.0));
+                REQUIRE(cache.Find("one").value() == 2.0);
+            }
+       }
     }
 }
 

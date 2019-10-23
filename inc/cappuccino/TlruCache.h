@@ -56,11 +56,23 @@ public:
         float max_load_factor = 1.0f);
 
     /**
+     * Inserts the given key value pair with the new TTL, but only if key doesn't already exist or is expired.
+     * @param ttl The TTL for this key value pair.
+     * @param key The key to store the value under.
+     * @param value The value of data to store.
+     * @return  True if new key inserted (not found or expired), False if already exists and not inserted
+     */
+    auto InsertOnly(
+        std::chrono::seconds ttl,
+        const KeyType& key,
+        ValueType value) -> bool;
+
+    /**
      * Inserts or updates the given key value pair with the new TTL.
      * @param ttl The TTL for this key value pair.
      * @param key The key to store the value under.
      * @param value The value of data to store.
-     * @return  True if new key inserted (was not found or expired), False if key already present (and not expired)
+     * @return  True if new key inserted (was not found or expired), False if existing unexpired key was updated
      */
     auto Insert(
         std::chrono::seconds ttl,
@@ -171,7 +183,8 @@ private:
         const KeyType& key,
         ValueType&& value,
         std::chrono::steady_clock::time_point now,
-        std::chrono::steady_clock::time_point expire_time) -> bool;
+        std::chrono::steady_clock::time_point expire_time,
+        bool insert_only=false) -> bool;
 
     auto doInsert(
         const KeyType& key,
