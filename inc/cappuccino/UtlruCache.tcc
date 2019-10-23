@@ -185,8 +185,7 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
         const bool expired = (now >= m_elements[element_idx].m_expire_time);
 
         Element& element = doUpdate(keyed_position, expire_time);
-        if (expired)
-            element.m_value = std::move(value);
+        element.m_value = std::move(value);
 
         return expired;
     } else {
