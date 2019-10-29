@@ -180,12 +180,16 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        // Check whether expired
+        // If the key already exists this is an update, this won't require a prune.
+
         const size_t element_idx = keyed_position->second;
         const bool expired = (now >= m_elements[element_idx].m_expire_time);
 
-        Element& element = doUpdate(keyed_position, expire_time);
-        element.m_value = std::move(value);
+        if (expired)
+        {
+            Element& element = doUpdate(keyed_position, expire_time);
+            element.m_value = std::move(value);
+        }
 
         return expired;
     } else {
