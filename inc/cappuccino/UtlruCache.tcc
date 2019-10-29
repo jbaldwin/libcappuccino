@@ -21,14 +21,26 @@ UtlruCache<KeyType, ValueType, SyncType>::UtlruCache(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+auto UtlruCache<KeyType, ValueType, SyncType>::InsertOnly(
+    const KeyType& key,
+    ValueType value) -> bool
+{
+    auto now = std::chrono::steady_clock::now();
+
+    std::lock_guard guard { m_lock };
+    auto expire_time = now + m_ttl;
+    return doInsertUpdate(key, std::move(value), now, expire_time, true);
+}
+
+template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto UtlruCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key,
     ValueType value) -> bool
 {
     auto now = std::chrono::steady_clock::now();
-    auto expire_time = now + m_ttl;
 
     std::lock_guard guard { m_lock };
+    auto expire_time = now + m_ttl;
     return doInsertUpdate(key, std::move(value), now, expire_time);
 };
 
@@ -176,7 +188,8 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value,
     std::chrono::steady_clock::time_point now,
-    std::chrono::steady_clock::time_point expire_time) -> bool
+    std::chrono::steady_clock::time_point expire_time,
+    bool insert_only) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
@@ -185,7 +198,7 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
         const size_t element_idx = keyed_position->second;
         const bool expired = (now >= m_elements[element_idx].m_expire_time);
 
-        if (expired)
+        if (!insert_only || expired)
         {
             Element& element = doUpdate(keyed_position, expire_time);
             element.m_value = std::move(value);

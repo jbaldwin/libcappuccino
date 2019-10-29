@@ -7,6 +7,7 @@ include(${MAKEDIR}/SetupLibraryTests.cmake)
 set(SOURCE_FILES_LIB_CAPPUCCINO_TEST
         CatchMain.cpp
         UnitTestTlruCache.cpp
+        UnitTestUtlruCache.cpp
 )
 
 enable_testing()
