@@ -19,27 +19,15 @@ SCENARIO("Test the TlruCache's insertion and deletion order.", "[cappuccino][tlr
         std::chrono::seconds                       ttl{1};
         cappuccino::TlruCache<std::string, double> cache{5};
 
-        bool inserted1 = cache.Insert(ttl, "one", 1.0); // first insert
-        bool inserted2 = cache.Insert(ttl, "two", 2.0);
-        bool inserted3 = cache.Insert(ttl, "three", 3.0);
-        bool inserted4 = cache.Insert(ttl, "four", 4.0);
-        bool inserted5 = cache.Insert(ttl, "five", 5.0); // last insert
-
-        WHEN("Values were inserted")
-        {
-            THEN("Insert() returns success")
-            {
-                REQUIRE(inserted1);
-                REQUIRE(inserted2);
-                REQUIRE(inserted3);
-                REQUIRE(inserted4);
-                REQUIRE(inserted5);
-            }
-        }
+        cache.Insert(ttl, "one", 1.0); // first insert
+        cache.Insert(ttl, "two", 2.0);
+        cache.Insert(ttl, "three", 3.0);
+        cache.Insert(ttl, "four", 4.0);
+        cache.Insert(ttl, "five", 5.0); // last insert
 
         WHEN("We try to add a 6th entry the first one entered should be deleted.")
         {
-            bool inserted6 = cache.Insert(ttl, "six", 6.0);
+            cache.Insert(ttl, "six", 6.0);
 
             auto val_one  = cache.Find("one");  // should be deleted
             auto val_five = cache.Find("five"); // should be there
@@ -47,7 +35,6 @@ SCENARIO("Test the TlruCache's insertion and deletion order.", "[cappuccino][tlr
 
             THEN("The first entry should be deleted")
             {
-                REQUIRE(inserted6);
                 REQUIRE_FALSE(val_one); // should be an empty optional.
 
                 REQUIRE(val_five.has_value());
@@ -113,15 +100,13 @@ SCENARIO("The TlruCache can store values in a limited space with both TTL and LR
 
             WHEN("We insert a new value (beyond the limit)")
             {
-                bool insert = cache.Insert(ttl, "five", 5.0);
+                cache.Insert(ttl, "five", 5.0);
 
                 auto val_five = cache.Find("five");
                 auto val_pi   = cache.Find("pi");
 
                 THEN("We expect to be able to retrieve it, and the LRU to work properly")
                 {
-                    REQUIRE(insert);
-
                     REQUIRE(val_one);
                     REQUIRE(val_one.value() == 1.0);
                     REQUIRE(val_two);
@@ -141,10 +126,10 @@ SCENARIO("The TlruCache can store values in a limited space with both TTL and LR
 
         WHEN("We try to insert a value already in the cache")
         {
-            bool first_insert  = cache.Insert(ttl, "persist", 1.0);
+            cache.Insert(ttl, "persist", 1.0);
             auto first_access  = cache.Find("persist");
-            bool test_ret_val1 = cache.Insert(ttl, "persist", 1337.1337);
-            bool test_ret_val2 = cache.Insert(ttl, "persist", 1234.1234);
+            cache.Insert(ttl, "persist", 1337.1337);
+            cache.Insert(ttl, "persist", 1234.1234);
 
             WHEN("We retrieve the value at that key")
             {
@@ -152,11 +137,8 @@ SCENARIO("The TlruCache can store values in a limited space with both TTL and LR
 
                 THEN("We expect the value was updated")
                 {
-                    REQUIRE(first_insert);
                     REQUIRE(first_access);
                     REQUIRE(first_access == 1.0);
-                    REQUIRE_FALSE(test_ret_val1); // no insert happened.
-                    REQUIRE_FALSE(test_ret_val2); // no insert happened.
                     REQUIRE(val_persist);
                     REQUIRE(val_persist.value() == 1234.1234);
                 }
@@ -184,16 +166,15 @@ SCENARIO("The TlruCache can store values in a limited space with both TTL and LR
 
         WHEN("We insert an existing key, wait 1s, and try to insert the same key")
         {
-            bool result1 = cache.Insert(ttl, "one", 12.3);
+            cache.Insert(ttl, "one", 12.3);
 
             std::this_thread::sleep_for(ttl);
 
-            bool result2 = cache.Insert(ttl, "one", 45.6);
+            cache.Insert(ttl, "one", 45.6);
 
-            THEN("We expect the first insert to fail due to existing key, then the second to succeed on expired key")
+            THEN("We expect the first insert to update existing key, then the second to insert on expired key")
             {
-                REQUIRE_FALSE(result1);
-                REQUIRE(result2);
+                REQUIRE(cache.Find("one").value() == 45.6);
             }
         }
     }

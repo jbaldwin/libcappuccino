@@ -35,13 +35,13 @@ auto UtlruCache<KeyType, ValueType, SyncType>::InsertOnly(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto UtlruCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key,
-    ValueType value) -> bool
+    ValueType value) -> void
 {
     auto now = std::chrono::steady_clock::now();
 
     std::lock_guard guard { m_lock };
     auto expire_time = now + m_ttl;
-    return doInsertUpdate(key, std::move(value), now, expire_time);
+    doInsertUpdate(key, std::move(value), now, expire_time);
 };
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -202,9 +202,10 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
         {
             Element& element = doUpdate(keyed_position, expire_time);
             element.m_value = std::move(value);
+            return true;
         }
 
-        return expired;
+        return false;
     } else {
         if (m_used_size >= m_elements.size()) {
             doPrune(now);

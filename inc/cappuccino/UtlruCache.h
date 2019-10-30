@@ -71,11 +71,10 @@ public:
      * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
      * @param value The value of data to store.
-     * @return  True if new key inserted (was not found or expired), False if existing unexpired key was updated
      */
     auto Insert(
         const KeyType& key,
-        ValueType value) -> bool;
+        ValueType value) -> void;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container that has

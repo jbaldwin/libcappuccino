@@ -72,12 +72,11 @@ public:
      * @param ttl The TTL for this key value pair.
      * @param key The key to store the value under.
      * @param value The value of data to store.
-     * @return  True if new key inserted (was not found or expired), False if existing unexpired key was updated
      */
     auto Insert(
         std::chrono::seconds ttl,
         const KeyType& key,
-        ValueType value) -> bool;
+        ValueType value) -> void;
 
     /**
      * Inserts or updates a range of key values pairs with their given TTL.  This expects a container

@@ -35,13 +35,13 @@ template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto TlruCache<KeyType, ValueType, SyncType>::Insert(
     std::chrono::seconds ttl,
     const KeyType& key,
-    ValueType value) -> bool
+    ValueType value) -> void
 {
     auto now = std::chrono::steady_clock::now();
     auto expire_time = now + ttl;
 
     std::lock_guard guard { m_lock };
-    return doInsertUpdate(key, std::move(value), now, expire_time);
+    doInsertUpdate(key, std::move(value), now, expire_time);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -184,9 +184,10 @@ auto TlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
         {
             Element& element = doUpdate(keyed_position, expire_time);
             element.m_value = std::move(value);
+            return true;
         }
 
-        return expired;
+        return false;
     } else {
         // Inserts might require an item to be pruned, check that first before inserting the new key/value.
         if (m_used_size >= m_elements.size()) {
