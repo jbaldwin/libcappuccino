@@ -493,7 +493,7 @@ static auto lru_cache_bench_test() -> void
     std::cout << "\n";
 }
 
-int main(int argc, char* argv[])
+int main()
 {
     constexpr size_t ITERATIONS = 1'000'000;
     constexpr size_t WORKER_COUNT = 12;

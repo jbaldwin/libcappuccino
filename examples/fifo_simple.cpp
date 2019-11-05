@@ -4,7 +4,7 @@
 
 using namespace cappuccino;
 
-int main(int argc, char* argv[])
+int main()
 {
     // Create a cache with 2 items.
     FifoCache<uint64_t, std::string> fifo_cache { 4 };

@@ -56,6 +56,18 @@ public:
         float max_load_factor = 1.0f);
 
     /**
+     * Inserts the given key value pair with the new TTL, but only if key doesn't already exist or is expired.
+     * @param ttl The TTL for this key value pair.
+     * @param key The key to store the value under.
+     * @param value The value of data to store.
+     * @return  True if new key inserted (not found or expired), False if already exists and not inserted
+     */
+    auto InsertOnly(
+        std::chrono::seconds ttl,
+        const KeyType& key,
+        ValueType value) -> bool;
+
+    /**
      * Inserts or updates the given key value pair with the new TTL.
      * @param ttl The TTL for this key value pair.
      * @param key The key to store the value under.
@@ -161,7 +173,7 @@ private:
         /// The iterator into the lru data structure.
         std::list<size_t>::iterator m_lru_position;
         /// The iterator into the ttl data structure.
-        std::map<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
+        std::multimap<std::chrono::steady_clock::time_point, size_t>::iterator m_ttl_position;
         /// The element's value.
         ValueType m_value;
     };
@@ -170,7 +182,8 @@ private:
         const KeyType& key,
         ValueType&& value,
         std::chrono::steady_clock::time_point now,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time,
+        bool insert_only=false) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -179,8 +192,7 @@ private:
 
     auto doUpdate(
         typename std::unordered_map<KeyType, size_t>::iterator keyed_position,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point expire_time) -> void;
+        std::chrono::steady_clock::time_point expire_time) -> Element&;
 
     auto doDelete(
         size_t element_idx) -> void;

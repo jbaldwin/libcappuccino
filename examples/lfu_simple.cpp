@@ -4,7 +4,7 @@
 
 using namespace cappuccino;
 
-int main(int argc, char* argv[])
+int main()
 {
     // Create a cache with 2 items.
     LfuCache<std::string, std::string> lfu_cache { 2 };

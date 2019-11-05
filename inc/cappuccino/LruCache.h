@@ -137,7 +137,7 @@ public:
 
     /**
      * The maximum capacity of this cache.
-     * @return
+     * @return Capacity
      */
     auto GetCapacity() const -> size_t;
 

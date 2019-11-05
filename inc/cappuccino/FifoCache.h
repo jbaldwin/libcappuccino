@@ -110,7 +110,6 @@ public:
      *                   e.g. vector<pair<KeyType, optional<ValueType>>>
      *                   or map<KeyType, optional<ValueType>>
      * @param key_optional_value_range The keys to optional values to fill out.
-     * @param peek Should the find act like all the items were not used?
      */
     template <typename RangeType>
     auto FindRangeFill(
@@ -123,7 +122,7 @@ public:
 
     /**
      * The maximum capacity of this cache.
-     * @return
+     * @return Capacity
      */
     auto GetCapacity() const -> size_t;
 

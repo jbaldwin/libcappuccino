@@ -40,5 +40,8 @@ if(UNIX)
     )
 endif()
 
-include(examples/CMakeLists.txt)
+if(${COMPILE_TESTS})
+    include(examples/CMakeLists.txt)
 
+    add_subdirectory(test)
+endif()
