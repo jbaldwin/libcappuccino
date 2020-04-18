@@ -1,85 +1,74 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8)
 project(cappuccino_examples CXX)
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/bin)
-
 ### fifo_simple ###
-project(fifo_simple CXX)
+project(cap_fifo_simple CXX)
 set(FIFO_SIMPLE_SOURCE_FILES
-    examples/fifo_simple.cpp
+    fifo_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${FIFO_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### lfu_simple ###
-project(lfu_simple CXX)
+project(cap_lfu_simple CXX)
 set(LFU_SIMPLE_SOURCE_FILES
-    examples/lfu_simple.cpp
+    lfu_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${LFU_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### lfuda_simple ###
-project(lfuda_simple CXX)
+project(cap_lfuda_simple CXX)
 set(LFUDA_SIMPLE_SOURCE_FILES
-    examples/lfuda_simple.cpp
+    lfuda_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${LFUDA_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### lru_simple ###
-project(lru_simple CXX)
+project(cap_lru_simple CXX)
 set(LRU_SIMPLE_SOURCE_FILES
-    examples/lru_simple.cpp
+    lru_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${LRU_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### tlru_simple ###
-project(tlru_simple CXX)
+project(cap_tlru_simple CXX)
 set(TLRU_SIMPLE_SOURCE_FILES
-    examples/tlru_simple.cpp
+    tlru_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${TLRU_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### utlru_simple ###
-project(utlru_simple CXX)
+project(cap_utlru_simple CXX)
 set(UTLRU_SIMPLE_SOURCE_FILES
-    examples/utlru_simple.cpp
+    utlru_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${UTLRU_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### bench ###
-project(bench CXX)
+project(cap_bench CXX)
 set(TLRU_BENCH_SOURCE_FILES
-    examples/bench.cpp
+    bench.cpp
 )
 add_executable(${PROJECT_NAME} ${TLRU_BENCH_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino pthread)
 
 ### mru_simple ###
-project(mru_simple CXX)
+project(cap_mru_simple CXX)
 set(MRU_SIMPLE_SOURCE_FILES
-    examples/mru_simple.cpp
+    mru_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${MRU_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### rr_simple ###
-project(rr_simple CXX)
+project(cap_rr_simple CXX)
 set(RR_SIMPLE_SOURCE_FILES
-    examples/rr_simple.cpp
+    rr_simple.cpp
 )
 add_executable(${PROJECT_NAME} ${RR_SIMPLE_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)

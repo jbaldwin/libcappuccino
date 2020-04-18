@@ -96,7 +96,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                     && std::is_same<ValueType, std::string>::value) {
                     lru_cache.Insert(ttl, i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -123,7 +123,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                     && std::is_same<ValueType, std::string>::value) {
                     data.emplace_back(ttl, i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 
@@ -143,7 +143,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     lru_cache.Find(i);
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -157,7 +157,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     data.emplace(i, std::optional<ValueType> {});
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 
@@ -251,7 +251,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
                     && std::is_same<ValueType, std::string>::value) {
                     lru_cache.Insert(i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -278,7 +278,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
                     && std::is_same<ValueType, std::string>::value) {
                     data.emplace_back(i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 
@@ -298,7 +298,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     lru_cache.Find(i);
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -312,7 +312,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     data.emplace(i, std::optional<ValueType> {});
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 
@@ -406,7 +406,7 @@ static auto lru_cache_bench_test() -> void
                     && std::is_same<ValueType, std::string>::value) {
                     lru_cache.Insert(i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -433,7 +433,7 @@ static auto lru_cache_bench_test() -> void
                     && std::is_same<ValueType, std::string>::value) {
                     data.emplace_back(i, to_string(i));
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 
@@ -453,7 +453,7 @@ static auto lru_cache_bench_test() -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     lru_cache.Find(i);
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
         } else {
@@ -467,7 +467,7 @@ static auto lru_cache_bench_test() -> void
                 } else if constexpr (std::is_same<KeyType, uint64_t>::value) {
                     data.emplace(i, std::optional<ValueType> {});
                 } else {
-                    static_assert("invalid type parameters");
+                    throw std::runtime_error("invalid type parameters");
                 }
             }
 

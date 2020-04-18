@@ -1,0 +1,101 @@
+name: build-release-test
+
+on: [push]
+
+jobs:
+    build-ubuntu:
+        name: Build Ubuntu and Test
+        runs-on: ubuntu-latest
+        container:
+            image: ubuntu:latest
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v2
+            -   name: apt
+                run: |
+                    apt-get update
+                    apt-get -y upgrade
+                    apt install -y build-essential software-properties-common
+                    add-apt-repository ppa:ubuntu-toolchain-r/test
+                    apt-get install -y \
+                        cmake \
+                        git \
+                        ninja-build \
+                        g++-9 \
+                        clang-9
+            -   name: build-release-g++
+                run: |
+                    mkdir build-release-g++
+                    cd build-release-g++
+                    cmake \
+                        -GNinja \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_C_COMPILER=gcc-9 \
+                        -DCMAKE_CXX_COMPILER=g++-9 \
+                        ..
+                    ninja
+            -   name: build-release-clang
+                run: |
+                    mkdir build-release-clang
+                    cd build-release-clang
+                    cmake \
+                        -GNinja \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_C_COMPILER=clang-9 \
+                        -DCMAKE_CXX_COMPILER=clang++-9 \
+                        ..
+                    ninja
+            -   name: test-release-g++
+                run: |
+                    cd build-release-g++
+                    ctest -v
+            -   name: test-release-clang
+                run: |
+                    cd build-release-clang
+                    ctest -v
+    build-fedora:
+        name: Build Fedora and Test
+        runs-on: ubuntu-latest
+        container:
+            image: fedora:latest
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v2
+            -   name: dnf
+                run: |
+                    sudo dnf install -y \
+                        git \
+                        cmake \
+                        ninja-build \
+                        g++ \
+                        clang
+            -   name: build-release-g++
+                run: |
+                    mkdir build-release-g++
+                    cd build-release-g++
+                    cmake \
+                        -GNinja \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_C_COMPILER=gcc \
+                        -DCMAKE_CXX_COMPILER=g++ \
+                        ..
+                    ninja
+            -   name: build-release-clang
+                run: |
+                    mkdir build-release-clang
+                    cd build-release-clang
+                    cmake \
+                        -GNinja \
+                        -DCMAKE_BUILD_TYPE=Release \
+                        -DCMAKE_C_COMPILER=clang \
+                        -DCMAKE_CXX_COMPILER=clang++ \
+                        ..
+                    ninja
+            -   name: test-release-g++
+                run: |
+                    cd build-release-g++
+                    ctest -v
+            -   name: test-release-clang
+                run: |
+                    cd build-release-clang
+                    ctest -v
