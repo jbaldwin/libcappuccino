@@ -1,12 +1,8 @@
-cmake_minimum_required(VERSION 3.0.2)
+cmake_minimum_required(VERSION 2.8)
 project(cappuccino CXX)
 
-set(LIBRARY_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${CMAKE_BUILD_TYPE}/lib)
-
-set(CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES pthread)
-
-set(SOURCE_FILES
-    inc/cappuccino/Cappuccino.h src/Cappuccino.cpp
+set(CAPPUCCINO_SOURCE_FILES
+    inc/cappuccino/Cappuccino.h
     inc/cappuccino/CappuccinoLock.h
     inc/cappuccino/FifoCache.h inc/cappuccino/FifoCache.tcc
     inc/cappuccino/LfuCache.h inc/cappuccino/LfuCache.tcc
@@ -19,14 +15,18 @@ set(SOURCE_FILES
     inc/cappuccino/UtlruCache.h inc/cappuccino/UtlruCache.tcc
 )
 
-add_library(${PROJECT_NAME} STATIC ${SOURCE_FILES})
-target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
+add_library(${PROJECT_NAME} STATIC ${CAPPUCCINO_SOURCE_FILES})
+set_target_properties(${PROJECT_NAME} PROPERTIES LINKER_LANGUAGE CXX)
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    ${CAPPUCCINO_SYSTEM_LIBRARY_DEPENDENCIES}
-)
+if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    target_compile_options(
+        ${PROJECT_NAME} PRIVATE
+        -Wno-unknown-pragmas
+    )
+endif()
 
 if(UNIX)
     target_compile_options(${PROJECT_NAME} PRIVATE
@@ -40,5 +40,6 @@ if(UNIX)
     )
 endif()
 
-include(examples/CMakeLists.txt)
-
+add_subdirectory(examples)
+enable_testing()
+add_subdirectory(test)
