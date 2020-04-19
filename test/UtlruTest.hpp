@@ -4,75 +4,66 @@
 
 #include <cappuccino/Cappuccino.hpp>
 
+#include <chrono>
+#include <thread>
+
 using namespace cappuccino;
 
-TEST_CASE("Fifo example")
+TEST_CASE("UtUtlru example")
 {
-    // Create a cache with 4 items.
-    FifoCache<uint64_t, std::string> cache { 4 };
+    using namespace std::chrono_literals;
 
-    // Insert some data.
-    cache.Insert(1, "one");
-    cache.Insert(2, "two");
-    cache.Insert(3, "three");
-    cache.Insert(4, "four");
+    // Create a cache with 2 items and a uniform TTL of 20ms.
+    cappuccino::UtlruCache<uint64_t, std::string> cache { 20ms, 2 };
 
-    {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-
-        REQUIRE(one.has_value());
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-    }
-
-    cache.Insert(5, "five");
+    // Insert "hello" and "world".
+    cache.Insert(1, "Hello");
+    cache.Insert(2, "World");
 
     {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
+        // Fetch the items from the catch, this will update their Utlru positions.
+        auto hello = cache.Find(1);
+        auto world = cache.Find(2);
 
-        REQUIRE(!one.has_value());
+        REQUIRE(hello.has_value());
+        REQUIRE(world.has_value());
 
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
+        REQUIRE(hello.value() == "Hello");
+        REQUIRE(world.value() == "World");
     }
 
-    cache.Insert(6, "six");
+    // Insert "Hola", this will replace "Hello" since its the oldest Utlru item
+    // and nothing has expired yet.
+    cache.Insert(3, "Hola");
 
     {
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
-        auto six = cache.Find(6);
+        auto hola = cache.Find(3);
+        auto hello = cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
+        auto world = cache.Find(2);
 
-        REQUIRE(!two.has_value());
-
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
-        REQUIRE(six.has_value());
+        REQUIRE(hola.has_value());
+        REQUIRE_FALSE(hello.has_value());
+        REQUIRE(world.has_value());
     }
+
+    // Sleep for an ~order of magnitude longer than the TTL.
+    std::this_thread::sleep_for(100ms);
+
+    // Manually trigger a clean since no insert/delete is wanted.
+    auto cleaned_count = cache.CleanExpiredValues();
+    REQUIRE(cleaned_count == 2);
+    REQUIRE(cache.empty());
 }
 
-TEST_CASE("Fifo Find doesn't exist")
+TEST_CASE("Utlru Find doesn't exist")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Fifo Insert Only")
+TEST_CASE("Utlru Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -85,18 +76,18 @@ TEST_CASE("Fifo Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Fifo Update Only")
+TEST_CASE("Utlru Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Fifo Insert Or Update")
+TEST_CASE("Utlru Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -109,9 +100,9 @@ TEST_CASE("Fifo Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Fifo InsertRange Insert Only")
+TEST_CASE("Utlru InsertRange Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -125,10 +116,11 @@ TEST_CASE("Fifo InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 3);
+
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2"); // make 2 Utlru
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
@@ -146,9 +138,9 @@ TEST_CASE("Fifo InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
     REQUIRE(cache.Find(4).has_value());
@@ -157,9 +149,9 @@ TEST_CASE("Fifo InsertRange Insert Only")
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Fifo InsertRange Update Only")
+TEST_CASE("Utlru InsertRange Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -178,9 +170,9 @@ TEST_CASE("Fifo InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Fifo InsertRange Insert Or Update")
+TEST_CASE("Utlru InsertRange Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -203,8 +195,8 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
+            {2, "test2"}, // make 2 Utlru
             {1, "test1"},
-            {2, "test2"},
             {3, "test3"},
             {4, "test4"}, // new
             {5, "test5"}, // new
@@ -215,9 +207,9 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
     REQUIRE(cache.Find(4).has_value());
@@ -226,9 +218,9 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Fifo Delete")
+TEST_CASE("Utlru Delete")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -245,9 +237,9 @@ TEST_CASE("Fifo Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Fifo DeleteRange")
+TEST_CASE("Utlru DeleteRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -282,9 +274,9 @@ TEST_CASE("Fifo DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Fifo FindRange")
+TEST_CASE("Utlru FindRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -331,9 +323,9 @@ TEST_CASE("Fifo FindRange")
     }
 }
 
-TEST_CASE("Fifo FindRangeFill")
+TEST_CASE("Utlru FindRangeFill")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -389,9 +381,9 @@ TEST_CASE("Fifo FindRangeFill")
     }
 }
 
-TEST_CASE("Fifo empty")
+TEST_CASE("Utlru empty")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -400,9 +392,9 @@ TEST_CASE("Fifo empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Fifo size + capacity")
+TEST_CASE("Utlru size + capacity")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
 
     REQUIRE(cache.capacity() == 4);
 
@@ -425,4 +417,68 @@ TEST_CASE("Fifo size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
+}
+
+TEST_CASE("Utlru Find with Peek")
+{
+    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+    REQUIRE(cache.Insert(3, "Hola"));
+    REQUIRE(cache.Insert(4, "Mondo"));
+
+    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to MRU
+    REQUIRE(cache.Find(2, Peek::NO).has_value());
+    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to MRU
+    REQUIRE(cache.Find(4, Peek::NO).has_value());
+
+    REQUIRE(cache.Insert(5, "another one bites the dust1"));
+    REQUIRE_FALSE(cache.Find(1).has_value());
+    REQUIRE(cache.Insert(6, "another one bites the dust2"));
+    REQUIRE_FALSE(cache.Find(3).has_value());
+}
+
+TEST_CASE("Utlru ttls")
+{
+    UtlruCache<uint64_t, std::string> cache { 20ms, 2 };
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+
+    std::this_thread::sleep_for(50ms);
+
+    REQUIRE(cache.Insert(3, "Hola"));
+
+    auto hello = cache.Find(1);
+    auto world = cache.Find(2);
+    auto hola  = cache.Find(3);
+
+    REQUIRE_FALSE(hello.has_value());
+    REQUIRE_FALSE(world.has_value());
+    REQUIRE(hola.has_value());
+    REQUIRE(hola.value() == "Hola");
+}
+
+TEST_CASE("Utlru Clean with only some expired")
+{
+    UtlruCache<uint64_t, std::string> cache { 25ms, 2 };
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+
+    std::this_thread::sleep_for(50ms);
+
+    REQUIRE(cache.Insert(3, "Hola"));
+
+    cache.CleanExpiredValues();
+
+    auto hello = cache.Find(1);
+    auto world = cache.Find(2);
+    auto hola  = cache.Find(3);
+
+    REQUIRE_FALSE(hello.has_value());
+    REQUIRE_FALSE(world.has_value());
+    REQUIRE(hola.has_value());
+    REQUIRE(hola.value() == "Hola");
 }

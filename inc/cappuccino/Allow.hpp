@@ -10,7 +10,7 @@ namespace cappuccino {
  * change this behavior to either only allow for inserting if the key doesn't exist
  * or only updating if the key already exists.
  */
-enum class InsertMethodEnum {
+enum class Allow {
     /// Insertion will only succeed if the key doesn't exist.
     INSERT = 0x01,
     /// Insertion will only succeed if the key already exists to be updated.
@@ -20,18 +20,18 @@ enum class InsertMethodEnum {
 };
 
 inline static auto insert_allowed(
-    InsertMethodEnum method) -> bool
+    Allow allow) -> bool
 {
-    return (static_cast<uint64_t>(method) & static_cast<uint64_t>(InsertMethodEnum::INSERT));
+    return (static_cast<uint64_t>(allow) & static_cast<uint64_t>(Allow::INSERT));
 }
 
 inline static auto update_allowed(
-    InsertMethodEnum method) -> bool
+    Allow allow) -> bool
 {
-    return (static_cast<uint64_t>(method) & static_cast<uint64_t>(InsertMethodEnum::UPDATE));
+    return (static_cast<uint64_t>(allow) & static_cast<uint64_t>(Allow::UPDATE));
 }
 
 auto to_string(
-    InsertMethodEnum method) -> const std::string&;
+    Allow allow) -> const std::string&;
 
 } // namespace cappuccino

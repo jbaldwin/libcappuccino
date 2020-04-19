@@ -104,53 +104,29 @@ int main(int argc, char* argv[])
 }
 ```
 
-#### Uniform TTL Least Recently Used Example
-This example provides a uniform item TTL LRU cache.  Every item placed into the cache has the same
-TTL value with the eviction policy being LRU.  This cache is useful when items should have the same
-TTL value applied to them.
+#### Insert, Update, Insert Or Update
+Each `Insert()` method on the various caches takes an optional parameter `Allow` that tells the cache
+how the insert call should behave.  By default this parameter is set to allow `INSERT_OR_UPDATE` on the
+elements being inserted into the cache.  This means if they do not exist in the cache they will be added
+and if they do exists the values will be udpated and any metadata like TTLs will be adjusted/reset.  The
+caller can also specify this parameter as just `INSERT` to only allow the item to be added if it doesn't
+already exist or as `UPDATE` to only change the item in the cahce if it already exists.
 
 ```C++
-#include "cappuccino/Cappuccino.hpp"
 
-#include <chrono>
-#include <iostream>
+using namespace std::chrono_literals;
+using namespace cappuccino;
+// Uniform TTL LRU cache with a 1 hour TTL and 200 element cache capacity.
+// The key is uint64_t and the value is std::string.
+UtlruCache<uint64_t, std::string> lru_cache { 1h, 200 };
 
-int main(int argc, char* argv[])
-{
-    (void)argc;
-    (void)argv;
+lru_cache.Insert(1, "Hello", Allow::INSERT); // OK
+lru_cache.Insert(1, "Hello", Allow::INSERT); // ERROR! already exists
 
-    using namespace std::chrono_literals;
+lru_cache.Insert(1, "Hola",  Allow::UPDATE); // OK exists
+lru_cache.Insert(2, "World", Allow::UPDATE); // ERROR! doesn't exist
 
-    // Create a cache with 2 items and a uniform TTL of 1 hour.
-    cappuccino::UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
-
-    // Insert "hello" and "world".
-    lru_cache.Insert(1, "Hello");
-    lru_cache.Insert(2, "World");
-
-    // Fetch the items from the catch, this will update their LRU positions.
-    auto hello = lru_cache.Find(1);
-    auto world = lru_cache.Find(2);
-
-    std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
-
-    // Insert "hHla", this will replace "Hello" since its the oldest lru item
-    // and nothing has expired yet.
-    lru_cache.Insert(3, "Hola");
-
-    auto hola = lru_cache.Find(3);
-    hello = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
-
-    std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
-
-    // No value should be present in the cache for the hello key.
-    if (!hello.has_value()) {
-        std::cout << "Hello was LRU evicted from the cache.\n";
-    }
-
-    return 0;
-}
+lru_cache.Insert(2, "World"); // OK, parameter defaults to Allow::INSERT_OR_UPDATE
 ```
 
 ## Requirements

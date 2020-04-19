@@ -70,6 +70,18 @@ jobs:
                         g++ \
                         clang \
                         lcov
+            -   name: build-debug-g++
+                run: |
+                    mkdir build-debug-g++
+                    cd build-debug-g++
+                    cmake \
+                        -GNinja \
+                        -DCAPPUCCINO_CODE_COVERAGE=ON \
+                        -DCMAKE_BUILD_TYPE=Debug \
+                        -DCMAKE_C_COMPILER=gcc \
+                        -DCMAKE_CXX_COMPILER=g++ \
+                        ..
+                    ninja
             -   name: build-release-g++
                 run: |
                     mkdir build-release-g++
@@ -103,11 +115,12 @@ jobs:
                     ctest -v
             -   name: Build coverage info
                 run: |
-                    cd build-release-g++
+                    cd build-debug-g++
+                    ctest -v
                     gcov -o ./test/CMakeFiles/libcappuccino_tests.dir/main.cpp.o ./test/libcappuccino_tests
                     lcov --include "*/inc/cappuccino/*" --include "*/src/*" --exclude "test/*" -o libcappuccino_tests.info -c -d .
             -   name: Coveralls GitHub Action
                 uses: coverallsapp/github-action@v1.0.1
                 with:
                     github-token: ${{ secrets.GITHUB_TOKEN }}
-                    path-to-lcov: build-release-g++/libcappuccino_tests.info
+                    path-to-lcov: build-debug-g++/libcappuccino_tests.info

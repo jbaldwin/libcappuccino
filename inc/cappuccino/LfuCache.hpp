@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/CappuccinoLock.hpp"
-#include "cappuccino/SyncImplEnum.hpp"
+#include "cappuccino/Lock.hpp"
+#include "cappuccino/Allow.hpp"
 
 #include <list>
 #include <map>
@@ -17,7 +17,7 @@ namespace cappuccino {
  * criteria.
  *
  * This cache is sync aware and can be used concurrently from multiple threads safely.
- * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
+ * To remove locks/synchronization use NO when creating the cache.
  *
  * @tparam KeyType The key type.  Must support std::hash() and operator<().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
@@ -25,7 +25,7 @@ namespace cappuccino {
  * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
+template <typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
 class LfuCache {
 private:
     struct Element;
@@ -60,10 +60,14 @@ public:
      * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
      * @param value The value of the data to store.
+     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     *              insertions and updates.
+     * @return True if the operation was successful based on `allow`.
      */
     auto Insert(
         const KeyType& key,
-        ValueType value) -> void;
+        ValueType value,
+        Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -72,10 +76,14 @@ public:
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
+     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     *              insertions and updates.
+     * @return The number of elements inserted based on `allow`.
      */
     template <typename RangeType>
     auto InsertRange(
-        RangeType&& key_value_range) -> void;
+        RangeType&& key_value_range,
+        Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -146,15 +154,19 @@ public:
         bool peek = false) -> void;
 
     /**
-     * @return The number of elements inside the cache.
+     * @return If this cache is currenty empty.
      */
-    auto GetUsedSize() const -> size_t;
+    auto empty() const -> bool { return m_used_size == 0; }
 
     /**
-     * The maximum capacity of this cache.
-     * @return
+     * @return The number of elements inside the cache.
      */
-    auto GetCapacity() const -> size_t;
+    auto size() const -> size_t { return m_used_size; }
+
+    /**
+     * @return The maximum capacity of this cache.
+     */
+    auto capacity() const -> size_t { return m_open_list.size(); }
 
 private:
     struct Element {
@@ -168,7 +180,8 @@ private:
 
     auto doInsertUpdate(
         const KeyType& key,
-        ValueType&& value) -> void;
+        ValueType&& value,
+        Allow allow) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -195,7 +208,7 @@ private:
     auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
-    CappuccinoLock<SyncType> m_lock;
+    Lock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
@@ -211,11 +224,7 @@ private:
     std::multimap<size_t, OpenListIterator> m_lfu_list;
 };
 
-} // namespace cappuccino
-
-namespace cappuccino {
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     size_t capacity,
     float max_load_factor)
@@ -227,26 +236,37 @@ LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     m_keyed_elements.reserve(capacity);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Insert(
-    const KeyType& key, ValueType value) -> void
+    const KeyType& key,
+    ValueType value,
+    Allow allow) -> bool
 {
     std::lock_guard guard { m_lock };
-    doInsertUpdate(key, std::move(value));
+    return doInsertUpdate(key, std::move(value), allow);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType&& key_value_range) -> void
+    RangeType&& key_value_range,
+    Allow allow) -> size_t
 {
-    std::lock_guard guard { m_lock };
-    for (auto& [key, value] : key_value_range) {
-        doInsertUpdate(key, std::move(value));
+    size_t inserted { 0 };
+
+    {
+        std::lock_guard guard { m_lock };
+        for (auto& [key, value] : key_value_range) {
+            if(doInsertUpdate(key, std::move(value), allow)) {
+                ++inserted;
+            }
+        }
     }
+
+    return inserted;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
@@ -260,7 +280,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::Delete(
     }
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <template <class...> typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
@@ -279,7 +299,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     return deleted_elements;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::Find(
     const KeyType& key, bool peek) -> std::optional<ValueType>
 {
@@ -287,7 +307,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::Find(
     return doFind(key, peek);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
     const KeyType& key,
     bool peek) -> std::optional<std::pair<ValueType, size_t>>
@@ -296,7 +316,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
     return doFindWithUseCount(key, peek);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range,
@@ -315,7 +335,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     return output;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range, bool peek) -> void
@@ -326,32 +346,28 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
     }
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
-{
-    return m_used_size;
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
-{
-    return m_open_list.size();
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
-    ValueType&& value) -> void
+    ValueType&& value,
+    Allow allow) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        doUpdate(keyed_position, std::move(value));
+        if(update_allowed(allow)) {
+            doUpdate(keyed_position, std::move(value));
+            return true;
+        }
     } else {
-        doInsert(key, std::move(value));
+        if(insert_allowed(allow)) {
+            doInsert(key, std::move(value));
+            return true;
+        }
     }
+    return false;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
@@ -374,7 +390,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
     ++m_used_size;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
     LfuCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
@@ -385,7 +401,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
     doAccess(element);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
     OpenListIterator open_list_position) -> void
 {
@@ -402,7 +418,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
     --m_used_size;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key,
     bool peek) -> std::optional<ValueType>
@@ -420,7 +436,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doFind(
     return {};
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
     const KeyType& key,
     bool peek) -> std::optional<std::pair<ValueType, size_t>>
@@ -438,7 +454,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
     return {};
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
     Element& element) -> void
 {
@@ -447,7 +463,7 @@ auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
     element.m_lfu_position = m_lfu_list.emplace(use_count + 1, element.m_keyed_position->second);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
     if (m_used_size > 0) {

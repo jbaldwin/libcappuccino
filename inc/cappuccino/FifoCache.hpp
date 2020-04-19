@@ -1,8 +1,7 @@
 #pragma once
 
-#include "cappuccino/CappuccinoLock.hpp"
-#include "cappuccino/SyncImplEnum.hpp"
-#include "cappuccino/InsertMethodEnum.hpp"
+#include "cappuccino/Lock.hpp"
+#include "cappuccino/Allow.hpp"
 
 #include <list>
 #include <mutex>
@@ -18,7 +17,7 @@ namespace cappuccino {
  * criteria.
  *
  * This cache is sync aware and can be used concurrently from multiple threads safely.
- * To remove locks/synchronization use SyncImplEnum::UNSYNC when creating the cache.
+ * To remove locks/synchronization use NO when creating the cache.
  *
  * @tparam KeyType The key type.  Must support std::hash().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
@@ -26,7 +25,7 @@ namespace cappuccino {
  * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType = SyncImplEnum::SYNC>
+template <typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
 class FifoCache {
 private:
     struct Element;
@@ -47,14 +46,14 @@ public:
      * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
      * @param value The value of the data to store.
-     * @param allowed_methods Allowed methods of insertion | update.  Defaults to allowing
-     *                        insertions and updates.
-     * @return True if the operation was successful based on the `allowed_methods`.
+     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     *              insertions and updates.
+     * @return True if the operation was successful based on `allow`.
      */
     auto Insert(
         const KeyType& key,
         ValueType value,
-        InsertMethodEnum allowed_methods = InsertMethodEnum::INSERT_OR_UPDATE) -> bool;
+        Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -63,14 +62,14 @@ public:
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
-     * @param allowed_methods Allowed methods of insertion | update.  Defaults to allowing
-     *                        insertions and updates.
-     * @return The number of elements inserted based on the `allowed_methods`.
+     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     *              insertions and updates.
+     * @return The number of elements inserted based on `allow`.
      */
     template <typename RangeType>
     auto InsertRange(
         RangeType&& key_value_range,
-        InsertMethodEnum allowed_methods = InsertMethodEnum::INSERT_OR_UPDATE) -> size_t;
+        Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -152,7 +151,7 @@ private:
     auto doInsertUpdate(
         const KeyType& key,
         ValueType&& value,
-        InsertMethodEnum allowed_methods) -> bool;
+        Allow allow) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -169,7 +168,7 @@ private:
         const KeyType& key) -> std::optional<ValueType>;
 
     /// Cache lock for all mutations if sync is enabled.
-    CappuccinoLock<SyncType> m_lock;
+    Lock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
     size_t m_used_size { 0 };
@@ -180,7 +179,7 @@ private:
     std::unordered_map<KeyType, FifoIterator> m_keyed_elements;
 };
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 FifoCache<KeyType, ValueType, SyncType>::FifoCache(
     size_t capacity,
     float max_load_factor)
@@ -190,28 +189,28 @@ FifoCache<KeyType, ValueType, SyncType>::FifoCache(
     m_keyed_elements.reserve(capacity);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key,
     ValueType value,
-    InsertMethodEnum allowed_methods) -> bool
+    Allow allow) -> bool
 {
     std::lock_guard guard { m_lock };
-    return doInsertUpdate(key, std::move(value), allowed_methods);
+    return doInsertUpdate(key, std::move(value), allow);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::InsertRange(
     RangeType&& key_value_range,
-    InsertMethodEnum allowed_methods) -> size_t
+    Allow allow) -> size_t
 {
     size_t inserted { 0 };
 
     {
         std::lock_guard guard { m_lock };
         for (auto& [key, value] : key_value_range) {
-            if(doInsertUpdate(key, std::move(value), allowed_methods)) {
+            if(doInsertUpdate(key, std::move(value), allow)) {
                 ++inserted;
             }
         }
@@ -220,7 +219,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::InsertRange(
     return inserted;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::Delete(
     const KeyType& key) -> bool
 {
@@ -234,7 +233,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::Delete(
     }
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <template <class...> typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::DeleteRange(
     const RangeType<KeyType>& key_range) -> size_t
@@ -253,7 +252,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::DeleteRange(
     return deleted_elements;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::Find(
     const KeyType& key) -> std::optional<ValueType>
 {
@@ -261,7 +260,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::Find(
     return doFind(key);
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::FindRange(
     const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
@@ -279,7 +278,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::FindRange(
     return output;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 template <typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::FindRangeFill(
     RangeType& key_optional_value_range) -> void
@@ -291,20 +290,20 @@ auto FifoCache<KeyType, ValueType, SyncType>::FindRangeFill(
     }
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
     ValueType&& value,
-    InsertMethodEnum allowed_methods) -> bool
+    Allow allow) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        if(update_allowed(allowed_methods)) {
+        if(update_allowed(allow)) {
             doUpdate(keyed_position, std::move(value));
             return true;
         }
     } else {
-        if(insert_allowed(allowed_methods)) {
+        if(insert_allowed(allow)) {
             doInsert(key, std::move(value));
             return true;
         }
@@ -313,7 +312,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     return false;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doInsert(
     const KeyType& key,
     ValueType&& value) -> void
@@ -338,7 +337,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::doInsert(
     element.m_keyed_position = m_keyed_elements.emplace(key, last_element_position).first;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doUpdate(
     FifoCache::KeyedIterator keyed_position,
     ValueType&& value) -> void
@@ -349,7 +348,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::doUpdate(
     // there is no access update in a fifo cache.
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doDelete(
     FifoIterator fifo_position) -> void
 {
@@ -369,7 +368,7 @@ auto FifoCache<KeyType, ValueType, SyncType>::doDelete(
     --m_used_size;
 }
 
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
+template <typename KeyType, typename ValueType, Sync SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doFind(
     const KeyType& key) -> std::optional<ValueType>
 {
