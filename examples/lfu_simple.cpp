@@ -1,13 +1,14 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <iostream>
 
-using namespace cappuccino;
-
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     // Create a cache with 2 items.
-    LfuCache<std::string, std::string> lfu_cache { 2 };
+    cappuccino::LfuCache<std::string, std::string> lfu_cache { 2 };
 
     // Insert some data.
     lfu_cache.Insert("foo", "Hello");

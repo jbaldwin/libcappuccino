@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 namespace cappuccino {
 
 /**
@@ -15,5 +17,9 @@ enum class SyncImplEnum {
     /// Synchronization via locks.
     SYNC = 1,
 };
+
+auto to_string(
+    SyncImplEnum sync
+) -> const std::string&;
 
 } // namespace cappuccino

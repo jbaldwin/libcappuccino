@@ -1,40 +1,40 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <chrono>
 #include <iostream>
 
-using namespace cappuccino;
-
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     using namespace std::chrono_literals;
 
-    // Create a cache with 2 items.
-    UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
+    // Create a cache with 2 items and a uniform TTL of 1 hour.
+    cappuccino::UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
 
-    // Insert hello and world.
+    // Insert "hello" and "world".
     lru_cache.Insert(1, "Hello");
     lru_cache.Insert(2, "World");
 
-    // Grab them
+    // Fetch the items from the catch, this will update their LRU positions.
     auto hello = lru_cache.Find(1);
     auto world = lru_cache.Find(2);
 
-    // Lets use them!
     std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
 
-    // Insert hola, this will replace "Hello" since its the oldest lru item (nothing has expired).
+    // Insert "hHla", this will replace "Hello" since its the oldest lru item
+    // and nothing has expired yet.
     lru_cache.Insert(3, "Hola");
 
     auto hola = lru_cache.Find(3);
-    hello = lru_cache.Find(1); // this will return an empty optional now
+    hello = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
 
-    // Grab and print again!
     std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
 
     // No value should be present in the cache for the hello key.
-    if (hello.has_value()) {
-        std::cout << "impossibru!" << std::endl;
+    if (!hello.has_value()) {
+        std::cout << "Hello was LRU evicted from the cache.\n";
     }
 
     return 0;

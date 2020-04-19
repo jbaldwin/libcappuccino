@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include <cappuccino/Cappuccino.h>
+#include <cappuccino/Cappuccino.hpp>
 
 #include "FifoTest.hpp"
