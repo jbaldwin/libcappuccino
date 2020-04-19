@@ -3,10 +3,17 @@ project(libcappuccino_tests)
 
 set(LIBCAPPUCCINO_TEST_SOURCE_FILES
     FifoTest.hpp
+    LfuTest.hpp
+    LfudaTest.hpp
+    LruTest.hpp
+    MruTest.hpp
+    RrTest.hpp
+    TlruTest.hpp
+    UtlruTest.hpp
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${LIBCAPPUCCINO_TEST_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino pthread)
 
 if(CAPPUCCINO_CODE_COVERAGE)
     target_compile_options(${PROJECT_NAME} PRIVATE --coverage)

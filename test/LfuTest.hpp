@@ -6,73 +6,55 @@
 
 using namespace cappuccino;
 
-TEST_CASE("Fifo example")
+TEST_CASE("Lfu example")
 {
-    // Create a cache with 4 items.
-    FifoCache<uint64_t, std::string> cache { 4 };
+    // Create a cache with 2 items.
+    LfuCache<uint64_t, std::string> cache { 2 };
 
     // Insert some data.
-    cache.Insert(1, "one");
-    cache.Insert(2, "two");
-    cache.Insert(3, "three");
-    cache.Insert(4, "four");
+    cache.Insert(1, "Hello");
+    cache.Insert(2, "World");
 
+    // Touch 1 twice.
+    auto foo1 = cache.Find(1);
+    auto foo2 = cache.Find(1);
+
+    // Touch 2 once.
+    auto bar1 = cache.Find(2);
+
+    // Insert 3, 2 should be replaced.
+    cache.Insert(3, "Hello World");
+
+    auto bar2 = cache.FindWithUseCount(2);
+    REQUIRE_FALSE(bar2.has_value());
+
+    auto foo3 = cache.FindWithUseCount(1);
+    auto foobar = cache.FindWithUseCount(3);
+
+    REQUIRE(foo3.has_value());
     {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-
-        REQUIRE(one.has_value());
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
+        auto& [value, use_count] = foo3.value();
+        REQUIRE(value == "Hello");
+        REQUIRE(use_count == 4); // insert, three finds
     }
 
-    cache.Insert(5, "five");
-
+    REQUIRE(foobar.has_value());
     {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
-
-        REQUIRE(!one.has_value());
-
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
-    }
-
-    cache.Insert(6, "six");
-
-    {
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
-        auto six = cache.Find(6);
-
-        REQUIRE(!two.has_value());
-
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
-        REQUIRE(six.has_value());
+        auto& [value, use_count] = foobar.value();
+        REQUIRE(value == "Hello World");
+        REQUIRE(use_count == 2); // insert, one find
     }
 }
 
-TEST_CASE("Fifo Find doesn't exist")
+TEST_CASE("Lfu Find doesn't exist")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Fifo Insert Only")
+TEST_CASE("Lfu Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -85,18 +67,18 @@ TEST_CASE("Fifo Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Fifo Update Only")
+TEST_CASE("Lfu Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Fifo Insert Or Update")
+TEST_CASE("Lfu Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -109,9 +91,9 @@ TEST_CASE("Fifo Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Fifo InsertRange Insert Only")
+TEST_CASE("Lfu InsertRange Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -146,20 +128,20 @@ TEST_CASE("Fifo InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Fifo InsertRange Update Only")
+TEST_CASE("Lfu InsertRange Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -178,9 +160,9 @@ TEST_CASE("Fifo InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Fifo InsertRange Insert Or Update")
+TEST_CASE("Lfu InsertRange Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -215,20 +197,20 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Fifo Delete")
+TEST_CASE("Lfu Delete")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -245,9 +227,9 @@ TEST_CASE("Fifo Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Fifo DeleteRange")
+TEST_CASE("Lfu DeleteRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -282,9 +264,9 @@ TEST_CASE("Fifo DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Fifo FindRange")
+TEST_CASE("Lfu FindRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -331,9 +313,9 @@ TEST_CASE("Fifo FindRange")
     }
 }
 
-TEST_CASE("Fifo FindRangeFill")
+TEST_CASE("Lfu FindRangeFill")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
@@ -389,9 +371,9 @@ TEST_CASE("Fifo FindRangeFill")
     }
 }
 
-TEST_CASE("Fifo empty")
+TEST_CASE("Lfu empty")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -400,9 +382,9 @@ TEST_CASE("Fifo empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Fifo size + capacity")
+TEST_CASE("Lfu size + capacity")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    LfuCache<uint64_t, std::string> cache { 4 };
 
     REQUIRE(cache.capacity() == 4);
 
@@ -425,4 +407,19 @@ TEST_CASE("Fifo size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
+}
+
+TEST_CASE("Lfu smallest use count")
+{
+    LfuCache<uint64_t, std::string> cache { 1 };
+
+    // Insert counts as a use.
+    cache.Insert(1, "test1");
+
+    // Find counts as a use.
+    auto element = cache.FindWithUseCount(1);
+    REQUIRE(element.has_value());
+    const auto& [value, use_count] = element.value();
+    REQUIRE(value == "test1");
+    REQUIRE(use_count == 2);
 }
