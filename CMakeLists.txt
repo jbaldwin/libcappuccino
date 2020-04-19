@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 2.8)
 project(cappuccino CXX)
 
+option(CAPPUCCINO_CODE_COVERAGE "Enable code coverage." OFF)
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CAPPUCCINO_SOURCE_FILES
     inc/cappuccino/Cappuccino.hpp
     inc/cappuccino/CappuccinoLock.hpp
     inc/cappuccino/FifoCache.hpp
+    inc/cappuccino/InsertMethodEnum.hpp src/InsertMethodEnum.cpp
     inc/cappuccino/LfuCache.hpp
     inc/cappuccino/LfudaCache.hpp
     inc/cappuccino/LruCache.hpp

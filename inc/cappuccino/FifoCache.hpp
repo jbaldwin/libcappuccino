@@ -2,6 +2,7 @@
 
 #include "cappuccino/CappuccinoLock.hpp"
 #include "cappuccino/SyncImplEnum.hpp"
+#include "cappuccino/InsertMethodEnum.hpp"
 
 #include <list>
 #include <mutex>
@@ -46,10 +47,14 @@ public:
      * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
      * @param value The value of the data to store.
+     * @param allowed_methods Allowed methods of insertion | update.  Defaults to allowing
+     *                        insertions and updates.
+     * @return True if the operation was successful based on the `allowed_methods`.
      */
     auto Insert(
         const KeyType& key,
-        ValueType value) -> void;
+        ValueType value,
+        InsertMethodEnum allowed_methods = InsertMethodEnum::INSERT_OR_UPDATE) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -58,10 +63,14 @@ public:
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
+     * @param allowed_methods Allowed methods of insertion | update.  Defaults to allowing
+     *                        insertions and updates.
+     * @return The number of elements inserted based on the `allowed_methods`.
      */
     template <typename RangeType>
     auto InsertRange(
-        RangeType&& key_value_range) -> void;
+        RangeType&& key_value_range,
+        InsertMethodEnum allowed_methods = InsertMethodEnum::INSERT_OR_UPDATE) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -117,15 +126,19 @@ public:
         RangeType& key_optional_value_range) -> void;
 
     /**
-     * @return The number of elements inside the cache.
+     * @return If this cache is currenty empty.
      */
-    auto GetUsedSize() const -> size_t;
+    auto empty() const -> bool { return (m_used_size == 0); }
 
     /**
-     * The maximum capacity of this cache.
-     * @return
+     * @return The number of elements in the cache, this does not prune expired elements.
      */
-    auto GetCapacity() const -> size_t;
+    auto size() const -> size_t { return m_used_size; }
+
+    /**
+     * @return The maximum capacity of this cache.
+     */
+    auto capacity() const -> size_t { return m_fifo_list.size(); }
 
 private:
     struct Element {
@@ -138,7 +151,8 @@ private:
 
     auto doInsertUpdate(
         const KeyType& key,
-        ValueType&& value) -> void;
+        ValueType&& value,
+        InsertMethodEnum allowed_methods) -> bool;
 
     auto doInsert(
         const KeyType& key,
@@ -166,10 +180,6 @@ private:
     std::unordered_map<KeyType, FifoIterator> m_keyed_elements;
 };
 
-} // namespace cappuccino
-
-namespace cappuccino {
-
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 FifoCache<KeyType, ValueType, SyncType>::FifoCache(
     size_t capacity,
@@ -183,21 +193,31 @@ FifoCache<KeyType, ValueType, SyncType>::FifoCache(
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::Insert(
     const KeyType& key,
-    ValueType value) -> void
+    ValueType value,
+    InsertMethodEnum allowed_methods) -> bool
 {
     std::lock_guard guard { m_lock };
-    doInsertUpdate(key, std::move(value));
+    return doInsertUpdate(key, std::move(value), allowed_methods);
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 template <typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType&& key_value_range) -> void
+    RangeType&& key_value_range,
+    InsertMethodEnum allowed_methods) -> size_t
 {
-    std::lock_guard guard { m_lock };
-    for (auto& [key, value] : key_value_range) {
-        doInsertUpdate(key, std::move(value));
+    size_t inserted { 0 };
+
+    {
+        std::lock_guard guard { m_lock };
+        for (auto& [key, value] : key_value_range) {
+            if(doInsertUpdate(key, std::move(value), allowed_methods)) {
+                ++inserted;
+            }
+        }
     }
+
+    return inserted;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -272,28 +292,25 @@ auto FifoCache<KeyType, ValueType, SyncType>::FindRangeFill(
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto FifoCache<KeyType, ValueType, SyncType>::GetUsedSize() const -> size_t
-{
-    return m_used_size;
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
-auto FifoCache<KeyType, ValueType, SyncType>::GetCapacity() const -> size_t
-{
-    return m_fifo_list.size();
-}
-
-template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
 auto FifoCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     const KeyType& key,
-    ValueType&& value) -> void
+    ValueType&& value,
+    InsertMethodEnum allowed_methods) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end()) {
-        doUpdate(keyed_position, std::move(value));
+        if(update_allowed(allowed_methods)) {
+            doUpdate(keyed_position, std::move(value));
+            return true;
+        }
     } else {
-        doInsert(key, std::move(value));
+        if(insert_allowed(allowed_methods)) {
+            doInsert(key, std::move(value));
+            return true;
+        }
     }
+
+    return false;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
@@ -312,12 +329,13 @@ auto FifoCache<KeyType, ValueType, SyncType>::doInsert(
     if (element.m_keyed_position.has_value()) {
         m_keyed_elements.erase(element.m_keyed_position.value());
     }
+    else {
+        // If the cache isn't 'full' increment its size.
+        ++m_used_size;
+    }
 
     element.m_value = std::move(value);
     element.m_keyed_position = m_keyed_elements.emplace(key, last_element_position).first;
-    ;
-
-    ++m_used_size;
 }
 
 template <typename KeyType, typename ValueType, SyncImplEnum SyncType>
