@@ -1,6 +1,6 @@
 #pragma once
 
-#include "cappuccino/SyncImplEnum.h"
+#include "cappuccino/SyncImplEnum.hpp"
 
 #include <mutex>
 
@@ -19,14 +19,14 @@ class CappuccinoLock {
 public:
     CappuccinoLock() = default;
 
-    auto lock() -> void
+    constexpr auto lock() -> void
     {
         if constexpr (SyncType == SyncImplEnum::SYNC) {
             m_lock.lock();
         }
     }
 
-    auto unlock() -> void
+    constexpr auto unlock() -> void
     {
         if constexpr (SyncType == SyncImplEnum::SYNC) {
             m_lock.unlock();

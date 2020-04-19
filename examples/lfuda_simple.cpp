@@ -1,15 +1,17 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <iostream>
 #include <thread>
 
-using namespace cappuccino;
 using namespace std::chrono_literals;
 
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     // Create a cache with 2 items, 1s age time with halving dynamic aging ratio.
-    LfudaCache<std::string, std::string> lfuda_cache { 2, 1s, 0.5f };
+    cappuccino::LfudaCache<std::string, std::string> lfuda_cache { 2, 1s, 0.5f };
 
     // Insert some data.
     lfuda_cache.Insert("foo", "Hello");

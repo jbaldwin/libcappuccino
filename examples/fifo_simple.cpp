@@ -1,13 +1,14 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <iostream>
 
-using namespace cappuccino;
-
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     // Create a cache with 2 items.
-    FifoCache<uint64_t, std::string> fifo_cache { 4 };
+    cappuccino::FifoCache<uint64_t, std::string> fifo_cache { 4 };
 
     // Insert some data.
     fifo_cache.Insert(1, "one");

@@ -1,13 +1,14 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <iostream>
 
-using namespace cappuccino;
-
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     // Create a cache with 2 items.
-    MruCache<uint64_t, std::string> mru_cache { 2 };
+    cappuccino::MruCache<uint64_t, std::string> mru_cache { 2 };
 
     // Insert hello and world.
     mru_cache.Insert(1, "Hello");

@@ -1,4 +1,4 @@
-#include <cappuccino/Cappuccino.h>
+#include <cappuccino/Cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>

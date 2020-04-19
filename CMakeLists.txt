@@ -1,18 +1,20 @@
 cmake_minimum_required(VERSION 2.8)
 project(cappuccino CXX)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 set(CAPPUCCINO_SOURCE_FILES
-    inc/cappuccino/Cappuccino.h
-    inc/cappuccino/CappuccinoLock.h
-    inc/cappuccino/FifoCache.h inc/cappuccino/FifoCache.tcc
-    inc/cappuccino/LfuCache.h inc/cappuccino/LfuCache.tcc
-    inc/cappuccino/LfudaCache.h inc/cappuccino/LfudaCache.tcc
-    inc/cappuccino/LruCache.h inc/cappuccino/LruCache.tcc
-    inc/cappuccino/MruCache.h inc/cappuccino/MruCache.tcc
-    inc/cappuccino/RrCache.h inc/cappuccino/RrCache.tcc
-    inc/cappuccino/SyncImplEnum.h
-    inc/cappuccino/TlruCache.h inc/cappuccino/TlruCache.tcc
-    inc/cappuccino/UtlruCache.h inc/cappuccino/UtlruCache.tcc
+    inc/cappuccino/Cappuccino.hpp
+    inc/cappuccino/CappuccinoLock.hpp
+    inc/cappuccino/FifoCache.hpp
+    inc/cappuccino/LfuCache.hpp
+    inc/cappuccino/LfudaCache.hpp
+    inc/cappuccino/LruCache.hpp
+    inc/cappuccino/MruCache.hpp
+    inc/cappuccino/RrCache.hpp
+    inc/cappuccino/SyncImplEnum.hpp src/SyncImplEnum.cpp
+    inc/cappuccino/TlruCache.hpp
+    inc/cappuccino/UtlruCache.hpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${CAPPUCCINO_SOURCE_FILES})
@@ -25,10 +27,14 @@ if(${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
     target_compile_options(
         ${PROJECT_NAME} PRIVATE
         -Wno-unknown-pragmas
+        -Wall
+        -Wextra
+        -Weffc++
+        -Werror
+        -Wpedantic
+        -pedantic-errors
     )
-endif()
-
-if(UNIX)
+elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
     target_compile_options(${PROJECT_NAME} PRIVATE
         -Wall
         -Wextra
@@ -36,7 +42,6 @@ if(UNIX)
         -Werror
         -Wpedantic
         -pedantic-errors
-        -MD
     )
 endif()
 

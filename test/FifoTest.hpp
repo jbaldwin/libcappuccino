@@ -2,7 +2,7 @@
 
 #include "catch.hpp"
 
-#include <cappuccino/Cappuccino.h>
+#include <cappuccino/Cappuccino.hpp>
 
 using namespace cappuccino;
 

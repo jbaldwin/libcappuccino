@@ -1,13 +1,14 @@
-#include "cappuccino/Cappuccino.h"
+#include "cappuccino/Cappuccino.hpp"
 
 #include <iostream>
 
-using namespace cappuccino;
-
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     // Create a cache with 2 items.
-    RrCache<uint64_t, std::string> rr_cache { 2 };
+    cappuccino::RrCache<uint64_t, std::string> rr_cache { 2 };
 
     // Insert hello and world.
     rr_cache.Insert(1, "Hello");

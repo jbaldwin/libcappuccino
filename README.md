@@ -36,9 +36,120 @@ See all of the examples under the examples/ directory.  Below are some simple ex
 to get your started on using libcappuccino.
 
 
-### LRU Example
+### Indivudal item TTL Least Recently Used Example
+This example provides a individual item TTL LRU cache.  This means each item placed in the cache
+can have its own TTL value and the eviction policy is TTL expired first and then LRU second.  This cache
+is useful when items should have various TTLs applied to them.  Use the Uniform TTL LRU if every item
+has the same TTL as it is more efficient on CPU and memory usage.  This type of cache could be compared
+to the likes of how Redis/Memcached work but in memory of the application rather than a separate
+process.
+
 ```C++
-... todo ...
+#include "cappuccino/Cappuccino.hpp"
+
+#include <chrono>
+#include <iostream>
+
+int main(int argc, char* argv[])
+{
+    using namespace std::chrono_literals;
+
+    // Create a cache with up to 3 items.
+    cappuccino::TlruCache<uint64_t, std::string> lru_cache { 3 };
+
+    // Insert "hello", "world" with different TTLs.
+    lru_cache.Insert(1h, 1, "Hello");
+    lru_cache.Insert(2h, 2, "World");
+
+    // Insert a third value to fill the cache.
+    lru_cache.Insert(3h, 3, "nope");
+
+    {
+        // Grab hello and world, this update their LRU positions.
+        auto hello = lru_cache.Find(1);
+        auto world = lru_cache.Find(2);
+
+        std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
+    }
+
+    // Insert "hola", this will replace "nope" since its the oldest lru item,
+    // nothing has expired at this time.
+    lru_cache.Insert(30min, 4, "Hola");
+
+    {
+        auto hola  = lru_cache.Find(4); // "hola" was just inserted, it will be found
+        auto hello = lru_cache.Find(1); // "hello" will also have a value, it is at the end of the lru list
+        auto world = lru_cache.Find(2); // "world" is in the middle of our 3 lru list.
+        auto nope  = lru_cache.Find(3); // "nope" was lru'ed when "hola" was inserted since "hello" and "world were fetched
+
+        if(hola.has_value()) {
+            std::cout << hola.value() << "\n";
+        }
+
+        if(hello.has_value()) {
+            std::cout << hello.value() << "\n";
+        }
+
+        if(world.has_value()) {
+            std::cout << world.value() << "\n";
+        }
+
+        if(!nope.has_value()) {
+            std::cout << "Nope was LRU'ed out of the cache.\n";
+        }
+    }
+
+    return 0;
+}
+```
+
+#### Uniform TTL Least Recently Used Example
+This example provides a uniform item TTL LRU cache.  Every item placed into the cache has the same
+TTL value with the eviction policy being LRU.  This cache is useful when items should have the same
+TTL value applied to them.
+
+```C++
+#include "cappuccino/Cappuccino.hpp"
+
+#include <chrono>
+#include <iostream>
+
+int main(int argc, char* argv[])
+{
+    (void)argc;
+    (void)argv;
+
+    using namespace std::chrono_literals;
+
+    // Create a cache with 2 items and a uniform TTL of 1 hour.
+    cappuccino::UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
+
+    // Insert "hello" and "world".
+    lru_cache.Insert(1, "Hello");
+    lru_cache.Insert(2, "World");
+
+    // Fetch the items from the catch, this will update their LRU positions.
+    auto hello = lru_cache.Find(1);
+    auto world = lru_cache.Find(2);
+
+    std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
+
+    // Insert "hHla", this will replace "Hello" since its the oldest lru item
+    // and nothing has expired yet.
+    lru_cache.Insert(3, "Hola");
+
+    auto hola = lru_cache.Find(3);
+    hello = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
+
+    std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
+
+    // No value should be present in the cache for the hello key.
+    if (!hello.has_value()) {
+        std::cout << "Hello was LRU evicted from the cache.\n";
+    }
+
+    return 0;
+}
 ```
 
 ## Requirements
