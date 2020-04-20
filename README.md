@@ -18,16 +18,16 @@ https://github.com/jbaldwin/libcappuccino
 
 # Overview #
 * Thread safe cache datastructures.
-** Can disable thread safety for singly threaded apps.
+  * Can disable thread safety for singly threaded apps.
 * The following eviction policies are currently supported:
-** First in first out (FIFO).
-** Least frequently used (LFU).
-** Least frequently used with dynamic aging (LFUDA).
-** Least recently used (LRU).
-** Most recently used (MRU).
-** Random Replacement (RR).
-** Time aware least recently used (TLRU).
-** Uniform time aware least recently used (UTLRU).
+  * First in first out (FIFO).
+  * Least frequently used (LFU).
+  * Least frequently used with dynamic aging (LFUDA).
+  * Least recently used (LRU).
+  * Most recently used (MRU).
+  * Random Replacement (RR).
+  * Time aware least recently used (TLRU).
+  * Uniform time aware least recently used (UTLRU).
 
 # Usage #
 
