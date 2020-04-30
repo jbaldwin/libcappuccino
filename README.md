@@ -1,7 +1,7 @@
 libcappuccino - C++17 Cache Data Structure Library.
 ===================================================
 
-[![CI](https://github.com/jbaldwin/libcappuccino/workflows/build-release-test/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build-release-test/badge.svg)
+[![CI](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/jbaldwin/libcappuccino/badge.svg?branch=master)](https://coveralls.io/github/jbaldwin/libcappuccino?branch=master)
 [![language][badge.language]][language]
 [![license][badge.license]][license]
