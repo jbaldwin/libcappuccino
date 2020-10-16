@@ -10,6 +10,8 @@
 #include "MruTest.hpp"
 #include "RrTest.hpp"
 #include "TlruTest.hpp"
+#include "UtMapTest.hpp"
+#include "UtSetTest.hpp"
 #include "UtlruTest.hpp"
 
 TEST_CASE("InsertMethod to_string()")

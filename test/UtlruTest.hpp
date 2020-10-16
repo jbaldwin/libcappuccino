@@ -106,9 +106,9 @@ TEST_CASE("Utlru InsertRange Insert Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -126,11 +126,11 @@ TEST_CASE("Utlru InsertRange Insert Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"},
-            {4, "test4"}, // new
-            {5, "test5"}, // new
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" },
+            { 4, "test4" }, // new
+            { 5, "test5" }, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -155,9 +155,9 @@ TEST_CASE("Utlru InsertRange Update Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
@@ -176,9 +176,9 @@ TEST_CASE("Utlru InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -195,11 +195,11 @@ TEST_CASE("Utlru InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {2, "test2"}, // make 2 Utlru
-            {1, "test1"},
-            {3, "test3"},
-            {4, "test4"}, // new
-            {5, "test5"}, // new
+            { 2, "test2" }, // make 2 Utlru
+            { 1, "test1" },
+            { 3, "test3" },
+            { 4, "test4" }, // new
+            { 5, "test5" }, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -243,9 +243,9 @@ TEST_CASE("Utlru DeleteRange")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -257,9 +257,8 @@ TEST_CASE("Utlru DeleteRange")
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(3).has_value());
 
-
     {
-        std::vector<uint64_t> delete_keys { 1,3,4,5 };
+        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -280,9 +279,9 @@ TEST_CASE("Utlru FindRange")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -291,7 +290,7 @@ TEST_CASE("Utlru FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys{ 1,2,3 };
+        std::vector<uint64_t> keys { 1, 2, 3 };
         auto items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
@@ -307,7 +306,7 @@ TEST_CASE("Utlru FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys{ 1,3,4,5 };
+        std::vector<uint64_t> keys { 1, 3, 4, 5 };
         auto items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
@@ -329,9 +328,9 @@ TEST_CASE("Utlru FindRangeFill")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -341,9 +340,9 @@ TEST_CASE("Utlru FindRangeFill")
     // Make sure all inserted keys exists via find range.
     {
         std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            {1, std::nullopt},
-            {2, std::nullopt},
-            {3, std::nullopt},
+            { 1, std::nullopt },
+            { 2, std::nullopt },
+            { 3, std::nullopt },
         };
         cache.FindRangeFill(items);
 
@@ -361,10 +360,10 @@ TEST_CASE("Utlru FindRangeFill")
     // Make sure keys not inserted are not found by find range.
     {
         std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            {1, std::nullopt},
-            {3, std::nullopt},
-            {4, std::nullopt},
-            {5, std::nullopt},
+            { 1, std::nullopt },
+            { 3, std::nullopt },
+            { 4, std::nullopt },
+            { 5, std::nullopt },
         };
         cache.FindRangeFill(items);
 
@@ -452,7 +451,7 @@ TEST_CASE("Utlru ttls")
 
     auto hello = cache.Find(1);
     auto world = cache.Find(2);
-    auto hola  = cache.Find(3);
+    auto hola = cache.Find(3);
 
     REQUIRE_FALSE(hello.has_value());
     REQUIRE_FALSE(world.has_value());
@@ -475,7 +474,7 @@ TEST_CASE("Utlru Clean with only some expired")
 
     auto hello = cache.Find(1);
     auto world = cache.Find(2);
-    auto hola  = cache.Find(3);
+    auto hola = cache.Find(3);
 
     REQUIRE_FALSE(hello.has_value());
     REQUIRE_FALSE(world.has_value());

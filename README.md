@@ -1,4 +1,4 @@
-libcappuccino - C++17 Cache Data Structure Library.
+libcappuccino - C++17 Cache and Associative Data Structure Library.
 ===================================================
 
 [![CI](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)
@@ -17,17 +17,21 @@ https://github.com/jbaldwin/libcappuccino
 **libcappuccino** is licensed under the Apache 2.0 license.
 
 # Overview #
-* Thread safe cache datastructures.
+* Thread safe cache and associative datastructures.
   * Can disable thread safety for singly threaded apps.
 * The following eviction policies are currently supported:
-  * First in first out (FIFO).
-  * Least frequently used (LFU).
-  * Least frequently used with dynamic aging (LFUDA).
-  * Least recently used (LRU).
-  * Most recently used (MRU).
-  * Random Replacement (RR).
-  * Time aware least recently used (TLRU).
-  * Uniform time aware least recently used (UTLRU).
+  * Cache (Fixed size contiguous memory).
+    * First in first out (FIFO).
+    * Least frequently used (LFU).
+    * Least frequently used with dynamic aging (LFUDA).
+    * Least recently used (LRU).
+    * Most recently used (MRU).
+    * Random Replacement (RR).
+    * Time aware least recently used (TLRU).
+    * Uniform time aware least recently used (UTLRU).
+  * Associative (Dynamic size non-contiguous memory).
+    * Uniform time aware set (UTSET).
+    * Uniform time aware map (UTMAP).
 
 # Usage #
 

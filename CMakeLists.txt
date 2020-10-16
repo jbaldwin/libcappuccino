@@ -18,6 +18,8 @@ set(CAPPUCCINO_SOURCE_FILES
     inc/cappuccino/MruCache.hpp
     inc/cappuccino/Peek.hpp src/Peek.cpp
     inc/cappuccino/RrCache.hpp
+    inc/cappuccino/UtMap.hpp
+    inc/cappuccino/UtSet.hpp
     inc/cappuccino/TlruCache.hpp
     inc/cappuccino/UtlruCache.hpp
 )
