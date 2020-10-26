@@ -118,8 +118,8 @@ public:
      * @param key_range A container with the set of keys to lookup.
      * @return All input keys to either a std::nullopt if it doesn't exist, or the value if it does.
      */
-    template <typename RangeType>
-    auto FindRange(const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+    template <template <class...> typename RangeType>
+    auto FindRange(const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all given keys values.
@@ -319,9 +319,9 @@ auto UtMap<KeyType, ValueType, SyncType>::Find(
 }
 
 template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
+template <template <class...> typename RangeType>
 auto UtMap<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
+    const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));

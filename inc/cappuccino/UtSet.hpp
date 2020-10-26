@@ -94,8 +94,8 @@ public:
      * @param key_range A container with the set of keys to lookup.
      * @return All input keys with a bool indicating if it exists.
      */
-    template <typename RangeType>
-    auto FindRange(const RangeType& key_range) -> std::vector<std::pair<KeyType, bool>>;
+    template <template <class...> typename RangeType>
+    auto FindRange(const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>;
 
     /**
      * Attempts to find all given keys presence.
@@ -287,9 +287,9 @@ auto UtSet<KeyType, SyncType>::Find(
 }
 
 template <typename KeyType, Sync SyncType>
-template <typename RangeType>
+template <template <class...> typename RangeType>
 auto UtSet<KeyType, SyncType>::FindRange(
-    const RangeType& key_range) -> std::vector<std::pair<KeyType, bool>>
+    const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>
 {
     std::vector<std::pair<KeyType, bool>> output;
     output.reserve(std::size(key_range));

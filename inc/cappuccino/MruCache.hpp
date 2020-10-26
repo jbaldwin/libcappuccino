@@ -116,9 +116,9 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template <typename RangeType>
+    template <template <class...> typename RangeType>
     auto FindRange(
-        const RangeType& key_range,
+        const RangeType<KeyType>& key_range,
         Peek peek = Peek::NO) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
@@ -295,9 +295,9 @@ auto MruCache<KeyType, ValueType, SyncType>::Find(
 }
 
 template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
+template <template <class...> typename RangeType>
 auto MruCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range,
+    const RangeType<KeyType>& key_range,
     Peek peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;

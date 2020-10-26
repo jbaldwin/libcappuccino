@@ -103,9 +103,9 @@ public:
      * @param key_range The keys to lookup their pairs.
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template <typename RangeType>
+    template <template <class...> typename RangeType>
     auto FindRange(
-        const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+        const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -260,9 +260,9 @@ auto FifoCache<KeyType, ValueType, SyncType>::Find(
 }
 
 template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
+template <template <class...> typename RangeType>
 auto FifoCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
+    const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));

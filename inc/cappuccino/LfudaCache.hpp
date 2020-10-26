@@ -151,9 +151,9 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template <typename RangeType>
+    template <template <class...>typename RangeType>
     auto FindRange(
-        const RangeType& key_range,
+        const RangeType<KeyType>& key_range,
         bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
@@ -377,9 +377,9 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindWithUseCount(
 }
 
 template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
+template <template <class...> typename RangeType>
 auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType& key_range,
+    const RangeType<KeyType>& key_range,
     bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     auto now = std::chrono::steady_clock::now();
