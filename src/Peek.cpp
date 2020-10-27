@@ -11,14 +11,13 @@ static const std::string PEEK_NO = "NO"s;
 auto to_string(
     Peek peek) -> const std::string&
 {
-    switch(peek)
-    {
-        case Peek::YES:
-            return PEEK_YES;
-        case Peek::NO:
-            return PEEK_NO;
-        default:
-            return PEEK_INVALID_VALUE;
+    switch (peek) {
+    case Peek::YES:
+        return PEEK_YES;
+    case Peek::NO:
+        return PEEK_NO;
+    default:
+        return PEEK_INVALID_VALUE;
     }
 }
 

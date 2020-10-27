@@ -72,3 +72,19 @@ set(RR_SIMPLE_SOURCE_FILES
 )
 add_executable(${PROJECT_NAME} ${RR_SIMPLE_SOURCE_FILES})
 target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+
+### utmap_simple ###
+project(cap_utmap_simple CXX)
+set(UTMAP_SIMPLE_SOURCE_FILES
+    utmap_simple.cpp
+)
+add_executable(${PROJECT_NAME} ${UTMAP_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+
+### utset_simple ###
+project(cap_utset_simple CXX)
+set(UTSET_SIMPLE_SOURCE_FILES
+    utset_simple.cpp
+)
+add_executable(${PROJECT_NAME} ${UTSET_SIMPLE_SOURCE_FILES})
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)

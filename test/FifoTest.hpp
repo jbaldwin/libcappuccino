@@ -115,9 +115,9 @@ TEST_CASE("Fifo InsertRange Insert Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -134,11 +134,11 @@ TEST_CASE("Fifo InsertRange Insert Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"},
-            {4, "test4"}, // new
-            {5, "test5"}, // new
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" },
+            { 4, "test4" }, // new
+            { 5, "test5" }, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -163,9 +163,9 @@ TEST_CASE("Fifo InsertRange Update Only")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
@@ -184,9 +184,9 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -203,11 +203,11 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"},
-            {4, "test4"}, // new
-            {5, "test5"}, // new
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" },
+            { 4, "test4" }, // new
+            { 5, "test5" }, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -251,9 +251,9 @@ TEST_CASE("Fifo DeleteRange")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -265,9 +265,8 @@ TEST_CASE("Fifo DeleteRange")
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(3).has_value());
 
-
     {
-        std::vector<uint64_t> delete_keys { 1,3,4,5 };
+        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -288,9 +287,9 @@ TEST_CASE("Fifo FindRange")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -299,7 +298,7 @@ TEST_CASE("Fifo FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys{ 1,2,3 };
+        std::vector<uint64_t> keys { 1, 2, 3 };
         auto items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
@@ -315,7 +314,7 @@ TEST_CASE("Fifo FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys{ 1,3,4,5 };
+        std::vector<uint64_t> keys { 1, 3, 4, 5 };
         auto items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
@@ -337,9 +336,9 @@ TEST_CASE("Fifo FindRangeFill")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts {
-            {1, "test1"},
-            {2, "test2"},
-            {3, "test3"}
+            { 1, "test1" },
+            { 2, "test2" },
+            { 3, "test3" }
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -349,9 +348,9 @@ TEST_CASE("Fifo FindRangeFill")
     // Make sure all inserted keys exists via find range.
     {
         std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            {1, std::nullopt},
-            {2, std::nullopt},
-            {3, std::nullopt},
+            { 1, std::nullopt },
+            { 2, std::nullopt },
+            { 3, std::nullopt },
         };
         cache.FindRangeFill(items);
 
@@ -369,10 +368,10 @@ TEST_CASE("Fifo FindRangeFill")
     // Make sure keys not inserted are not found by find range.
     {
         std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            {1, std::nullopt},
-            {3, std::nullopt},
-            {4, std::nullopt},
-            {5, std::nullopt},
+            { 1, std::nullopt },
+            { 3, std::nullopt },
+            { 4, std::nullopt },
+            { 5, std::nullopt },
         };
         cache.FindRangeFill(items);
 

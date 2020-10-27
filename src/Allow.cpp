@@ -12,16 +12,15 @@ static std::string ALLOW_UPDATE = "UPDATE"s;
 auto to_string(
     Allow allow) -> const std::string&
 {
-    switch(allow)
-    {
-        case Allow::INSERT_OR_UPDATE:
-            return ALLOW_INSERT_OR_UPDATE;
-        case Allow::INSERT:
-            return ALLOW_INSERT;
-        case Allow::UPDATE:
-            return ALLOW_UPDATE;
-        default:
-            return ALLOW_INVALID_VALUE;
+    switch (allow) {
+    case Allow::INSERT_OR_UPDATE:
+        return ALLOW_INSERT_OR_UPDATE;
+    case Allow::INSERT:
+        return ALLOW_INSERT;
+    case Allow::UPDATE:
+        return ALLOW_UPDATE;
+    default:
+        return ALLOW_INVALID_VALUE;
     }
 }
 
