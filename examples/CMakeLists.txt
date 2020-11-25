@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 2.8)
 project(cappuccino_examples CXX)
 
+### allow_example ###
+project(cap_allow_simple CXX)
+add_executable(${PROJECT_NAME} allow_example.cpp)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+
 ### fifo_simple ###
 project(cap_fifo_simple CXX)
 set(FIFO_SIMPLE_SOURCE_FILES

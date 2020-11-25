@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
     using namespace std::chrono_literals;
 
     // Create a cache with 2 items and a uniform TTL of 1 hour.
-    cappuccino::UtlruCache<uint64_t, std::string> lru_cache { 1h, 2 };
+    cappuccino::UtlruCache<uint64_t, std::string> lru_cache{1h, 2};
 
     // Insert "hello" and "world".
     lru_cache.Insert(1, "Hello");
@@ -28,12 +28,13 @@ int main(int argc, char* argv[])
     lru_cache.Insert(3, "Hola");
 
     auto hola = lru_cache.Find(3);
-    hello = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
+    hello     = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
 
     std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
 
     // No value should be present in the cache for the hello key.
-    if (!hello.has_value()) {
+    if (!hello.has_value())
+    {
         std::cout << "Hello was LRU evicted from the cache.\n";
     }
 

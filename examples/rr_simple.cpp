@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     (void)argv;
 
     // Create a cache with 2 items.
-    cappuccino::RrCache<uint64_t, std::string> rr_cache { 2 };
+    cappuccino::RrCache<uint64_t, std::string> rr_cache{2};
 
     // Insert hello and world.
     rr_cache.Insert(1, "Hello");
@@ -27,17 +27,22 @@ int main(int argc, char* argv[])
     rr_cache.Insert(3, "Hola");
 
     {
-        auto hola = rr_cache.Find(3); // This will be in the cache.
+        auto hola  = rr_cache.Find(3); // This will be in the cache.
         auto hello = rr_cache.Find(1); // This might be in the cache?
         auto world = rr_cache.Find(2); // This might be in the cache?
 
         std::cout << hola.value() << ", ";
 
-        if (hello.has_value()) {
+        if (hello.has_value())
+        {
             std::cout << hello.value();
-        } else if (world.has_value()) {
+        }
+        else if (world.has_value())
+        {
             std::cout << world.value();
-        } else {
+        }
+        else
+        {
             std::cout << "impossibru!";
         }
         std::cout << std::endl;

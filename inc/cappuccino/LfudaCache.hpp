@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/Lock.hpp"
 #include "cappuccino/Allow.hpp"
+#include "cappuccino/Lock.hpp"
 
 #include <chrono>
 #include <list>
@@ -10,8 +10,8 @@
 #include <unordered_map>
 #include <vector>
 
-namespace cappuccino {
-
+namespace cappuccino
+{
 /**
  * Least Frequently Used (LFU) Cache with Dynamic Aging.
  * Each key value pair is evicted based on being the least frequently used, and no other
@@ -30,8 +30,9 @@ namespace cappuccino {
  * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
-template <typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
-class LfudaCache {
+template<typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
+class LfudaCache
+{
 private:
     struct Element;
 
@@ -40,16 +41,11 @@ private:
     using LfuIterator   = typename std::multimap<size_t, AgeIterator>::iterator;
 
 public:
-    struct KeyValue {
-        KeyValue(
-            KeyType key,
-            ValueType value)
-            : m_key(std::move(key))
-            , m_value(std::move(value))
-        {
-        }
+    struct KeyValue
+    {
+        KeyValue(KeyType key, ValueType value) : m_key(std::move(key)), m_value(std::move(value)) {}
 
-        KeyType m_key;
+        KeyType   m_key;
         ValueType m_value;
     };
 
@@ -63,10 +59,10 @@ public:
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
     explicit LfudaCache(
-        size_t capacity,
-        std::chrono::milliseconds dynamic_age_tick = std::chrono::minutes { 1 },
-        float dynamic_age_ratio = 0.5f,
-        float max_load_factor = 1.0f);
+        size_t                    capacity,
+        std::chrono::milliseconds dynamic_age_tick  = std::chrono::minutes{1},
+        float                     dynamic_age_ratio = 0.5f,
+        float                     max_load_factor   = 1.0f);
 
     /**
      * Inserts or updates the given key value pair.
@@ -79,10 +75,7 @@ public:
      *              insertions and updates.
      * @return True if the operation was successful based on `allow`.
      */
-    auto Insert(
-        const KeyType& key,
-        ValueType value,
-        Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
+    auto Insert(const KeyType& key, ValueType value, Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -101,18 +94,15 @@ public:
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template <typename RangeType>
-    auto InsertRange(
-        RangeType&& key_value_range,
-        Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
+    template<typename RangeType>
+    auto InsertRange(RangeType&& key_value_range, Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
 
     /**
      * Attempts to delete the given key.
      * @param key The key to delete from the lru cache.
      * @return True if the key was deleted, false if the key does not exist.
      */
-    auto Delete(
-        const KeyType& key) -> bool;
+    auto Delete(const KeyType& key) -> bool;
 
     /**
      * Attempts to delete all given keys.
@@ -120,9 +110,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template <template <class...> typename RangeType>
-    auto DeleteRange(
-        const RangeType<KeyType>& key_range) -> size_t;
+    template<template<class...> typename RangeType>
+    auto DeleteRange(const RangeType<KeyType>& key_range) -> size_t;
 
     /**
      * Attempts to find the given key's value.
@@ -130,9 +119,7 @@ public:
      * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
-    auto Find(
-        const KeyType& key,
-        bool peek = false) -> std::optional<ValueType>;
+    auto Find(const KeyType& key, bool peek = false) -> std::optional<ValueType>;
 
     /**
      * Attempts to find the given key's value and use count.
@@ -140,9 +127,7 @@ public:
      * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
      */
-    auto FindWithUseCount(
-        const KeyType& key,
-        bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
+    auto FindWithUseCount(const KeyType& key, bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -151,10 +136,9 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template <template <class...>typename RangeType>
-    auto FindRange(
-        const RangeType<KeyType>& key_range,
-        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+    template<template<class...> typename RangeType>
+    auto FindRange(const RangeType<KeyType>& key_range, bool peek = false)
+        -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -169,10 +153,8 @@ public:
      * @param key_optional_value_range The keys to optional values to fill out.
      * @param peek Should the find act like all the items were not used?
      */
-    template <typename RangeType>
-    auto FindRangeFill(
-        RangeType& key_optional_value_range,
-        bool peek = false) -> void;
+    template<typename RangeType>
+    auto FindRangeFill(RangeType& key_optional_value_range, bool peek = false) -> void;
 
     /**
      * Attempts to dynamically age the elements in the cache.
@@ -199,7 +181,8 @@ public:
     auto capacity() const -> size_t { return m_dynamic_age_list.size(); }
 
 private:
-    struct Element {
+    struct Element
+    {
         /// The iterator into the keyed data structure.
         KeyedIterator m_keyed_position;
         /// The iterator into the lfu data structure.
@@ -210,55 +193,36 @@ private:
         ValueType m_value;
     };
 
-    auto doInsertUpdate(
-        const KeyType& key,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point now,
-        Allow allow) -> bool;
+    auto doInsertUpdate(const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point now, Allow allow)
+        -> bool;
 
-    auto doInsert(
-        const KeyType& key,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point now) -> void;
+    auto doInsert(const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point now) -> void;
 
-    auto doUpdate(
-        KeyedIterator keyed_position,
-        ValueType&& value,
-        std::chrono::steady_clock::time_point now) -> void;
+    auto doUpdate(KeyedIterator keyed_position, ValueType&& value, std::chrono::steady_clock::time_point now) -> void;
 
-    auto doDelete(
-        AgeIterator age_iterator) -> void;
+    auto doDelete(AgeIterator age_iterator) -> void;
 
-    auto doFind(
-        const KeyType& key,
-        bool peek,
-        std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
+    auto doFind(const KeyType& key, bool peek, std::chrono::steady_clock::time_point now) -> std::optional<ValueType>;
 
-    auto doFindWithUseCount(
-        const KeyType& key,
-        bool peek,
-        std::chrono::steady_clock::time_point now) -> std::optional<std::pair<ValueType, size_t>>;
+    auto doFindWithUseCount(const KeyType& key, bool peek, std::chrono::steady_clock::time_point now)
+        -> std::optional<std::pair<ValueType, size_t>>;
 
-    auto doAccess(
-        Element& element,
-        std::chrono::steady_clock::time_point now) -> void;
+    auto doAccess(Element& element, std::chrono::steady_clock::time_point now) -> void;
 
-    auto doPrune(
-        std::chrono::steady_clock::time_point now) -> void;
+    auto doPrune(std::chrono::steady_clock::time_point now) -> void;
 
-    auto doDynamicAge(
-        std::chrono::steady_clock::time_point now) -> size_t;
+    auto doDynamicAge(std::chrono::steady_clock::time_point now) -> size_t;
 
     /// Cache lock for all mutations if sync is enabled.
     Lock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
-    size_t m_used_size { 0 };
+    size_t m_used_size{0};
 
     /// The amount of time for an element to not be touched to dynamically age.
-    std::chrono::milliseconds m_dynamic_age_tick { std::chrono::minutes { 1 } };
+    std::chrono::milliseconds m_dynamic_age_tick{std::chrono::minutes{1}};
     /// The ratio amount of 'uses' to remove when an element dynamically ages.
-    float m_dynamic_age_ratio { 0.5f };
+    float m_dynamic_age_ratio{0.5f};
 
     /// The keyed lookup data structure, the value is the index into 'm_elements'.
     std::unordered_map<KeyType, AgeIterator> m_keyed_elements;
@@ -271,15 +235,12 @@ private:
     AgeIterator m_open_list_end;
 };
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 LfudaCache<KeyType, ValueType, SyncType>::LfudaCache(
-    size_t capacity,
-    std::chrono::milliseconds dynamic_age_tick,
-    float dynamic_age_ratio,
-    float max_load_factor)
-    : m_dynamic_age_tick(dynamic_age_tick)
-    , m_dynamic_age_ratio(dynamic_age_ratio)
-    , m_dynamic_age_list(capacity)
+    size_t capacity, std::chrono::milliseconds dynamic_age_tick, float dynamic_age_ratio, float max_load_factor)
+    : m_dynamic_age_tick(dynamic_age_tick),
+      m_dynamic_age_ratio(dynamic_age_ratio),
+      m_dynamic_age_list(capacity)
 {
     m_open_list_end = m_dynamic_age_list.begin();
 
@@ -287,32 +248,29 @@ LfudaCache<KeyType, ValueType, SyncType>::LfudaCache(
     m_keyed_elements.reserve(capacity);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::Insert(
-    const KeyType& key,
-    ValueType value,
-    Allow allow) -> bool
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value, Allow allow) -> bool
 {
     auto now = std::chrono::steady_clock::now();
 
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doInsertUpdate(key, std::move(value), now, allow);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
-auto LfudaCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType&& key_value_range,
-    Allow allow) -> size_t
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename RangeType>
+auto LfudaCache<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_range, Allow allow) -> size_t
 {
     auto now = std::chrono::steady_clock::now();
 
-    size_t inserted { 0 };
+    size_t inserted{0};
 
     {
-        std::lock_guard guard { m_lock };
-        for (auto& [key, value] : key_value_range) {
-            if(doInsertUpdate(key, std::move(value), now, allow)) {
+        std::lock_guard guard{m_lock};
+        for (auto& [key, value] : key_value_range)
+        {
+            if (doInsertUpdate(key, std::move(value), now, allow))
+            {
                 ++inserted;
             }
         }
@@ -321,31 +279,34 @@ auto LfudaCache<KeyType, ValueType, SyncType>::InsertRange(
     return inserted;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::Delete(
-    const KeyType& key) -> bool
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
 {
-    std::lock_guard guard { m_lock };
-    auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    std::lock_guard guard{m_lock};
+    auto            keyed_position = m_keyed_elements.find(key);
+    if (keyed_position != m_keyed_elements.end())
+    {
         doDelete(keyed_position->second);
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <template <class...> typename RangeType>
-auto LfudaCache<KeyType, ValueType, SyncType>::DeleteRange(
-    const RangeType<KeyType>& key_range) -> size_t
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<template<class...> typename RangeType>
+auto LfudaCache<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
 {
-    size_t deleted_elements { 0 };
+    size_t deleted_elements{0};
 
-    std::lock_guard guard { m_lock };
-    for (auto& key : key_range) {
+    std::lock_guard guard{m_lock};
+    for (auto& key : key_range)
+    {
         auto keyed_position = m_keyed_elements.find(key);
-        if (keyed_position != m_keyed_elements.end()) {
+        if (keyed_position != m_keyed_elements.end())
+        {
             ++deleted_elements;
             doDelete(keyed_position->second);
         }
@@ -354,33 +315,29 @@ auto LfudaCache<KeyType, ValueType, SyncType>::DeleteRange(
     return deleted_elements;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key,
-    bool peek) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::Find(const KeyType& key, bool peek) -> std::optional<ValueType>
 {
     auto now = std::chrono::steady_clock::now();
 
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doFind(key, peek, now);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::FindWithUseCount(
-    const KeyType& key,
-    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::FindWithUseCount(const KeyType& key, bool peek)
+    -> std::optional<std::pair<ValueType, size_t>>
 {
     auto now = std::chrono::steady_clock::now();
 
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doFindWithUseCount(key, peek, now);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <template <class...> typename RangeType>
-auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType<KeyType>& key_range,
-    bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<template<class...> typename RangeType>
+auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& key_range, bool peek)
+    -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     auto now = std::chrono::steady_clock::now();
 
@@ -388,8 +345,9 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(
     output.reserve(std::size(key_range));
 
     {
-        std::lock_guard guard { m_lock };
-        for (auto& key : key_range) {
+        std::lock_guard guard{m_lock};
+        for (auto& key : key_range)
+        {
             output.emplace_back(key, doFind(key, peek, now));
         }
     }
@@ -397,44 +355,45 @@ auto LfudaCache<KeyType, ValueType, SyncType>::FindRange(
     return output;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
-auto LfudaCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType& key_optional_value_range,
-    bool peek) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename RangeType>
+auto LfudaCache<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optional_value_range, bool peek) -> void
 {
     auto now = std::chrono::steady_clock::now();
 
-    std::lock_guard guard { m_lock };
-    for (auto& [key, optional_value] : key_optional_value_range) {
+    std::lock_guard guard{m_lock};
+    for (auto& [key, optional_value] : key_optional_value_range)
+    {
         optional_value = doFind(key, peek, now);
     }
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::DynamicallyAge() -> size_t
 {
     auto now = std::chrono::steady_clock::now();
 
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doDynamicAge(now);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doInsertUpdate(
-    const KeyType& key,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point now,
-    Allow allow) -> bool
+    const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point now, Allow allow) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
-        if(update_allowed(allow)) {
+    if (keyed_position != m_keyed_elements.end())
+    {
+        if (update_allowed(allow))
+        {
             doUpdate(keyed_position, std::move(value), now);
             return true;
         }
-    } else {
-        if(insert_allowed(allow)) {
+    }
+    else
+    {
+        if (insert_allowed(allow))
+        {
             doInsert(key, std::move(value), now);
             return true;
         }
@@ -443,50 +402,47 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     return false;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doInsert(
-    const KeyType& key,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point now) -> void
+    const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point now) -> void
 {
-    if (m_used_size >= m_dynamic_age_list.size()) {
+    if (m_used_size >= m_dynamic_age_list.size())
+    {
         doPrune(now);
     }
 
     Element& element = *m_open_list_end;
 
     auto keyed_position = m_keyed_elements.emplace(key, m_open_list_end).first;
-    auto lfu_position = m_lfu_list.emplace(1, m_open_list_end);
+    auto lfu_position   = m_lfu_list.emplace(1, m_open_list_end);
 
-    element.m_value = std::move(value);
+    element.m_value          = std::move(value);
     element.m_keyed_position = keyed_position;
-    element.m_lfu_position = lfu_position;
-    element.m_dynamic_age = now;
+    element.m_lfu_position   = lfu_position;
+    element.m_dynamic_age    = now;
 
     ++m_open_list_end;
 
     ++m_used_size;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doUpdate(
-    LfudaCache::KeyedIterator keyed_position,
-    ValueType&& value,
-    std::chrono::steady_clock::time_point now) -> void
+    LfudaCache::KeyedIterator keyed_position, ValueType&& value, std::chrono::steady_clock::time_point now) -> void
 {
     Element& element = *keyed_position->second;
-    element.m_value = std::move(value);
+    element.m_value  = std::move(value);
 
     doAccess(element, now);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::doDelete(
-    AgeIterator age_iterator) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::doDelete(AgeIterator age_iterator) -> void
 {
     Element& element = *age_iterator;
 
-    if (age_iterator != std::prev(m_open_list_end)) {
+    if (age_iterator != std::prev(m_open_list_end))
+    {
         m_dynamic_age_list.splice(m_open_list_end, m_dynamic_age_list, age_iterator);
     }
     --m_open_list_end;
@@ -497,46 +453,46 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doDelete(
     --m_used_size;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doFind(
-    const KeyType& key,
-    bool peek,
-    std::chrono::steady_clock::time_point now) -> std::optional<ValueType>
+    const KeyType& key, bool peek, std::chrono::steady_clock::time_point now) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    if (keyed_position != m_keyed_elements.end())
+    {
         Element& element = *keyed_position->second;
-        if (!peek) {
+        if (!peek)
+        {
             doAccess(element, now);
         }
-        return { element.m_value };
+        return {element.m_value};
     }
 
     return {};
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
-    const KeyType& key,
-    bool peek,
-    std::chrono::steady_clock::time_point now) -> std::optional<std::pair<ValueType, size_t>>
+    const KeyType& key, bool peek, std::chrono::steady_clock::time_point now)
+    -> std::optional<std::pair<ValueType, size_t>>
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    if (keyed_position != m_keyed_elements.end())
+    {
         Element& element = *keyed_position->second;
-        if (!peek) {
+        if (!peek)
+        {
             doAccess(element, now);
         }
-        return { std::make_pair(element.m_value, element.m_lfu_position->first) };
+        return {std::make_pair(element.m_value, element.m_lfu_position->first)};
     }
 
     return {};
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfudaCache<KeyType, ValueType, SyncType>::doAccess(
-    LfudaCache::Element& element,
-    std::chrono::steady_clock::time_point now) -> void
+    LfudaCache::Element& element, std::chrono::steady_clock::time_point now) -> void
 {
     // Update lfu position.
     auto use_count = element.m_lfu_position->first;
@@ -546,17 +502,18 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doAccess(
     // Update dynamic aging position.
     auto last_aged_item = std::prev(m_open_list_end);
     // swap to the end of the aged list and update its time.
-    if (element.m_keyed_position->second != last_aged_item) {
+    if (element.m_keyed_position->second != last_aged_item)
+    {
         m_dynamic_age_list.splice(last_aged_item, m_dynamic_age_list, element.m_keyed_position->second);
     }
     element.m_dynamic_age = now;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::doPrune(
-    std::chrono::steady_clock::time_point now) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::doPrune(std::chrono::steady_clock::time_point now) -> void
 {
-    if (m_used_size > 0) {
+    if (m_used_size > 0)
+    {
         doDynamicAge(now);
 
         // Now delete the least frequently used item after dynamically aging.
@@ -564,23 +521,24 @@ auto LfudaCache<KeyType, ValueType, SyncType>::doPrune(
     }
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfudaCache<KeyType, ValueType, SyncType>::doDynamicAge(
-    std::chrono::steady_clock::time_point now) -> size_t
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfudaCache<KeyType, ValueType, SyncType>::doDynamicAge(std::chrono::steady_clock::time_point now) -> size_t
 {
-    size_t aged { 0 };
+    size_t aged{0};
 
     // For all items in the DA list that are old enough and in use, DA them!
     auto da_start = m_dynamic_age_list.begin();
-    auto da_last = m_open_list_end; // need the item previous to the end to splice properly
-    while (da_start != m_open_list_end && (*da_start).m_dynamic_age + m_dynamic_age_tick < now) {
+    auto da_last  = m_open_list_end; // need the item previous to the end to splice properly
+    while (da_start != m_open_list_end && (*da_start).m_dynamic_age + m_dynamic_age_tick < now)
+    {
         // swap to after the last item (if it isn't the last item..)
-        if (da_start != da_last) {
+        if (da_start != da_last)
+        {
             m_dynamic_age_list.splice(da_last, m_dynamic_age_list, da_start);
         }
 
         // Update its dynamic age time to now.
-        Element& element = *da_start;
+        Element& element      = *da_start;
         element.m_dynamic_age = now;
         // Now *= ratio its use count to actually age it.  This requires
         // deleting from and re-inserting into the lfu data structure.

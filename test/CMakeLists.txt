@@ -2,16 +2,16 @@ cmake_minimum_required(VERSION 2.8)
 project(libcappuccino_tests)
 
 set(LIBCAPPUCCINO_TEST_SOURCE_FILES
-    FifoTest.hpp
-    LfuTest.hpp
-    LfudaTest.hpp
-    LruTest.hpp
-    MruTest.hpp
-    RrTest.hpp
-    TlruTest.hpp
-    UtlruTest.hpp
-    UtMapTest.hpp
-    UtSetTest.hpp
+    FifoTest.cpp
+    LfuTest.cpp
+    LfudaTest.cpp
+    LruTest.cpp
+    MruTest.cpp
+    RrTest.cpp
+    TlruTest.cpp
+    UtlruTest.cpp
+    UtMapTest.cpp
+    UtSetTest.cpp
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${LIBCAPPUCCINO_TEST_SOURCE_FILES})

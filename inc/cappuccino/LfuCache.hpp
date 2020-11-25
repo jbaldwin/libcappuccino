@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/Lock.hpp"
 #include "cappuccino/Allow.hpp"
+#include "cappuccino/Lock.hpp"
 
 #include <list>
 #include <map>
@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
-namespace cappuccino {
-
+namespace cappuccino
+{
 /**
  * Least Frequently Used (LFU) Cache.
  * Each key value pair is evicted based on being the least frequently used, and no other
@@ -25,26 +25,22 @@ namespace cappuccino {
  * @tparam SyncType By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
-template <typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
-class LfuCache {
+template<typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
+class LfuCache
+{
 private:
     struct Element;
 
     using OpenListIterator = typename std::list<Element>::iterator;
-    using LfuIterator = typename std::multimap<size_t, OpenListIterator>::iterator;
-    using KeyedIterator = typename std::unordered_map<KeyType, OpenListIterator>::iterator;
+    using LfuIterator      = typename std::multimap<size_t, OpenListIterator>::iterator;
+    using KeyedIterator    = typename std::unordered_map<KeyType, OpenListIterator>::iterator;
 
 public:
-    struct KeyValue {
-        KeyValue(
-            KeyType key,
-            ValueType value)
-            : m_key(std::move(key))
-            , m_value(std::move(value))
-        {
-        }
+    struct KeyValue
+    {
+        KeyValue(KeyType key, ValueType value) : m_key(std::move(key)), m_value(std::move(value)) {}
 
-        KeyType m_key;
+        KeyType   m_key;
         ValueType m_value;
     };
 
@@ -52,9 +48,7 @@ public:
      * @param capacity The maximum number of key value pairs allowed in the cache.
      * @param max_load_factor The load factor for the hash map, generally 1 is a good default.
      */
-    explicit LfuCache(
-        size_t capacity,
-        float max_load_factor = 1.0f);
+    explicit LfuCache(size_t capacity, float max_load_factor = 1.0f);
 
     /**
      * Inserts or updates the given key value pair.
@@ -64,10 +58,7 @@ public:
      *              insertions and updates.
      * @return True if the operation was successful based on `allow`.
      */
-    auto Insert(
-        const KeyType& key,
-        ValueType value,
-        Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
+    auto Insert(const KeyType& key, ValueType value, Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -80,18 +71,15 @@ public:
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template <typename RangeType>
-    auto InsertRange(
-        RangeType&& key_value_range,
-        Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
+    template<typename RangeType>
+    auto InsertRange(RangeType&& key_value_range, Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
 
     /**
      * Attempts to delete the given key.
      * @param key The key to delete from the lru cache.
      * @return True if the key was deleted, false if the key does not exist.
      */
-    auto Delete(
-        const KeyType& key) -> bool;
+    auto Delete(const KeyType& key) -> bool;
 
     /**
      * Attempts to delete all given keys.
@@ -99,9 +87,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template <template <class...> typename RangeType>
-    auto DeleteRange(
-        const RangeType<KeyType>& key_range) -> size_t;
+    template<template<class...> typename RangeType>
+    auto DeleteRange(const RangeType<KeyType>& key_range) -> size_t;
 
     /**
      * Attempts to find the given key's value.
@@ -109,9 +96,7 @@ public:
      * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
-    auto Find(
-        const KeyType& key,
-        bool peek = false) -> std::optional<ValueType>;
+    auto Find(const KeyType& key, bool peek = false) -> std::optional<ValueType>;
 
     /**
      * Attempts to find the given key's value and use count.
@@ -119,9 +104,7 @@ public:
      * @param peek Should the find act like the item wasn't used?
      * @return An optional with the key's value and use count if it exists, or empty optional if it does not.
      */
-    auto FindWithUseCount(
-        const KeyType& key,
-        bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
+    auto FindWithUseCount(const KeyType& key, bool peek = false) -> std::optional<std::pair<ValueType, size_t>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -130,10 +113,9 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template <template <class...> typename RangeType>
-    auto FindRange(
-        const RangeType<KeyType>& key_range,
-        bool peek = false) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+    template<template<class...> typename RangeType>
+    auto FindRange(const RangeType<KeyType>& key_range, bool peek = false)
+        -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all the given keys values.
@@ -148,10 +130,8 @@ public:
      * @param key_optional_value_range The keys to optional values to fill out.
      * @param peek Should the find act like all the items were not used?
      */
-    template <typename RangeType>
-    auto FindRangeFill(
-        RangeType& key_optional_value_range,
-        bool peek = false) -> void;
+    template<typename RangeType>
+    auto FindRangeFill(RangeType& key_optional_value_range, bool peek = false) -> void;
 
     /**
      * @return If this cache is currenty empty.
@@ -169,7 +149,8 @@ public:
     auto capacity() const -> size_t { return m_open_list.size(); }
 
 private:
-    struct Element {
+    struct Element
+    {
         /// The iterator into the keyed data structure.
         KeyedIterator m_keyed_position;
         /// The iterator into the lfu data structure.
@@ -178,32 +159,19 @@ private:
         ValueType m_value;
     };
 
-    auto doInsertUpdate(
-        const KeyType& key,
-        ValueType&& value,
-        Allow allow) -> bool;
+    auto doInsertUpdate(const KeyType& key, ValueType&& value, Allow allow) -> bool;
 
-    auto doInsert(
-        const KeyType& key,
-        ValueType&& value) -> void;
+    auto doInsert(const KeyType& key, ValueType&& value) -> void;
 
-    auto doUpdate(
-        KeyedIterator keyed_position,
-        ValueType&& value) -> void;
+    auto doUpdate(KeyedIterator keyed_position, ValueType&& value) -> void;
 
-    auto doDelete(
-        OpenListIterator open_list_position) -> void;
+    auto doDelete(OpenListIterator open_list_position) -> void;
 
-    auto doFind(
-        const KeyType& key,
-        bool peek) -> std::optional<ValueType>;
+    auto doFind(const KeyType& key, bool peek) -> std::optional<ValueType>;
 
-    auto doFindWithUseCount(
-        const KeyType& key,
-        bool peek) -> std::optional<std::pair<ValueType, size_t>>;
+    auto doFindWithUseCount(const KeyType& key, bool peek) -> std::optional<std::pair<ValueType, size_t>>;
 
-    auto doAccess(
-        Element& element) -> void;
+    auto doAccess(Element& element) -> void;
 
     auto doPrune() -> void;
 
@@ -211,7 +179,7 @@ private:
     Lock<SyncType> m_lock;
 
     /// The current number of elements in the cache.
-    size_t m_used_size { 0 };
+    size_t m_used_size{0};
 
     /// The open list of un-used slots in 'm_elements'.
     std::list<Element> m_open_list;
@@ -224,11 +192,8 @@ private:
     std::multimap<size_t, OpenListIterator> m_lfu_list;
 };
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-LfuCache<KeyType, ValueType, SyncType>::LfuCache(
-    size_t capacity,
-    float max_load_factor)
-    : m_open_list(capacity)
+template<typename KeyType, typename ValueType, Sync SyncType>
+LfuCache<KeyType, ValueType, SyncType>::LfuCache(size_t capacity, float max_load_factor) : m_open_list(capacity)
 {
     m_open_list_end = m_open_list.begin();
 
@@ -236,28 +201,25 @@ LfuCache<KeyType, ValueType, SyncType>::LfuCache(
     m_keyed_elements.reserve(capacity);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::Insert(
-    const KeyType& key,
-    ValueType value,
-    Allow allow) -> bool
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value, Allow allow) -> bool
 {
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doInsertUpdate(key, std::move(value), allow);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
-auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
-    RangeType&& key_value_range,
-    Allow allow) -> size_t
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename RangeType>
+auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_range, Allow allow) -> size_t
 {
-    size_t inserted { 0 };
+    size_t inserted{0};
 
     {
-        std::lock_guard guard { m_lock };
-        for (auto& [key, value] : key_value_range) {
-            if(doInsertUpdate(key, std::move(value), allow)) {
+        std::lock_guard guard{m_lock};
+        for (auto& [key, value] : key_value_range)
+        {
+            if (doInsertUpdate(key, std::move(value), allow))
+            {
                 ++inserted;
             }
         }
@@ -266,31 +228,34 @@ auto LfuCache<KeyType, ValueType, SyncType>::InsertRange(
     return inserted;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::Delete(
-    const KeyType& key) -> bool
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
 {
-    std::lock_guard guard { m_lock };
-    auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    std::lock_guard guard{m_lock};
+    auto            keyed_position = m_keyed_elements.find(key);
+    if (keyed_position != m_keyed_elements.end())
+    {
         doDelete(keyed_position->second);
         return true;
-    } else {
+    }
+    else
+    {
         return false;
     }
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <template <class...> typename RangeType>
-auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
-    const RangeType<KeyType>& key_range) -> size_t
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<template<class...> typename RangeType>
+auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
 {
-    size_t deleted_elements { 0 };
+    size_t deleted_elements{0};
 
-    std::lock_guard guard { m_lock };
-    for (auto& key : key_range) {
+    std::lock_guard guard{m_lock};
+    for (auto& key : key_range)
+    {
         auto keyed_position = m_keyed_elements.find(key);
-        if (keyed_position != m_keyed_elements.end()) {
+        if (keyed_position != m_keyed_elements.end())
+        {
             ++deleted_elements;
             doDelete(keyed_position->second);
         }
@@ -299,35 +264,33 @@ auto LfuCache<KeyType, ValueType, SyncType>::DeleteRange(
     return deleted_elements;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::Find(
-    const KeyType& key, bool peek) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::Find(const KeyType& key, bool peek) -> std::optional<ValueType>
 {
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doFind(key, peek);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(
-    const KeyType& key,
-    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::FindWithUseCount(const KeyType& key, bool peek)
+    -> std::optional<std::pair<ValueType, size_t>>
 {
-    std::lock_guard guard { m_lock };
+    std::lock_guard guard{m_lock};
     return doFindWithUseCount(key, peek);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <template <class...> typename RangeType>
-auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
-    const RangeType<KeyType>& key_range,
-    bool peek) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<template<class...> typename RangeType>
+auto LfuCache<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& key_range, bool peek)
+    -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
     output.reserve(std::size(key_range));
 
     {
-        std::lock_guard guard { m_lock };
-        for (auto& key : key_range) {
+        std::lock_guard guard{m_lock};
+        for (auto& key : key_range)
+        {
             output.emplace_back(key, doFind(key, peek));
         }
     }
@@ -335,31 +298,33 @@ auto LfuCache<KeyType, ValueType, SyncType>::FindRange(
     return output;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-template <typename RangeType>
-auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(
-    RangeType& key_optional_value_range, bool peek) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename RangeType>
+auto LfuCache<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optional_value_range, bool peek) -> void
 {
-    std::lock_guard guard { m_lock };
-    for (auto& [key, optional_value] : key_optional_value_range) {
+    std::lock_guard guard{m_lock};
+    for (auto& [key, optional_value] : key_optional_value_range)
+    {
         optional_value = doFind(key, peek);
     }
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
-    const KeyType& key,
-    ValueType&& value,
-    Allow allow) -> bool
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(const KeyType& key, ValueType&& value, Allow allow) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
-        if(update_allowed(allow)) {
+    if (keyed_position != m_keyed_elements.end())
+    {
+        if (update_allowed(allow))
+        {
             doUpdate(keyed_position, std::move(value));
             return true;
         }
-    } else {
-        if(insert_allowed(allow)) {
+    }
+    else
+    {
+        if (insert_allowed(allow))
+        {
             doInsert(key, std::move(value));
             return true;
         }
@@ -367,47 +332,44 @@ auto LfuCache<KeyType, ValueType, SyncType>::doInsertUpdate(
     return false;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doInsert(
-    const KeyType& key,
-    ValueType&& value) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doInsert(const KeyType& key, ValueType&& value) -> void
 {
-    if (m_used_size >= m_open_list.size()) {
+    if (m_used_size >= m_open_list.size())
+    {
         doPrune();
     }
 
     Element& element = *m_open_list_end;
 
     auto keyed_position = m_keyed_elements.emplace(key, m_open_list_end).first;
-    auto lfu_position = m_lfu_list.emplace(1, m_open_list_end);
+    auto lfu_position   = m_lfu_list.emplace(1, m_open_list_end);
 
-    element.m_value = std::move(value);
+    element.m_value          = std::move(value);
     element.m_keyed_position = keyed_position;
-    element.m_lfu_position = lfu_position;
+    element.m_lfu_position   = lfu_position;
 
     ++m_open_list_end;
 
     ++m_used_size;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(
-    LfuCache::KeyedIterator keyed_position,
-    ValueType&& value) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doUpdate(LfuCache::KeyedIterator keyed_position, ValueType&& value) -> void
 {
     Element& element = *keyed_position->second;
-    element.m_value = std::move(value);
+    element.m_value  = std::move(value);
 
     doAccess(element);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
-    OpenListIterator open_list_position) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doDelete(OpenListIterator open_list_position) -> void
 {
     Element& element = *open_list_position;
 
-    if (open_list_position != std::prev(m_open_list_end)) {
+    if (open_list_position != std::prev(m_open_list_end))
+    {
         m_open_list.splice(m_open_list_end, m_open_list, open_list_position);
     }
     --m_open_list_end;
@@ -418,55 +380,56 @@ auto LfuCache<KeyType, ValueType, SyncType>::doDelete(
     --m_used_size;
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doFind(
-    const KeyType& key,
-    bool peek) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doFind(const KeyType& key, bool peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    if (keyed_position != m_keyed_elements.end())
+    {
         Element& element = *keyed_position->second;
         // Don't update the elements access in the LRU if peeking.
-        if (!peek) {
+        if (!peek)
+        {
             doAccess(element);
         }
-        return { element.m_value };
+        return {element.m_value};
     }
 
     return {};
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(
-    const KeyType& key,
-    bool peek) -> std::optional<std::pair<ValueType, size_t>>
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doFindWithUseCount(const KeyType& key, bool peek)
+    -> std::optional<std::pair<ValueType, size_t>>
 {
     auto keyed_position = m_keyed_elements.find(key);
-    if (keyed_position != m_keyed_elements.end()) {
+    if (keyed_position != m_keyed_elements.end())
+    {
         Element& element = *keyed_position->second;
         // Don't update the elements access in the LRU if peeking.
-        if (!peek) {
+        if (!peek)
+        {
             doAccess(element);
         }
-        return { std::make_pair(element.m_value, element.m_lfu_position->first) };
+        return {std::make_pair(element.m_value, element.m_lfu_position->first)};
     }
 
     return {};
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
-auto LfuCache<KeyType, ValueType, SyncType>::doAccess(
-    Element& element) -> void
+template<typename KeyType, typename ValueType, Sync SyncType>
+auto LfuCache<KeyType, ValueType, SyncType>::doAccess(Element& element) -> void
 {
     auto use_count = element.m_lfu_position->first;
     m_lfu_list.erase(element.m_lfu_position);
     element.m_lfu_position = m_lfu_list.emplace(use_count + 1, element.m_keyed_position->second);
 }
 
-template <typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, Sync SyncType>
 auto LfuCache<KeyType, ValueType, SyncType>::doPrune() -> void
 {
-    if (m_used_size > 0) {
+    if (m_used_size > 0)
+    {
         doDelete(m_lfu_list.begin()->second);
     }
 }

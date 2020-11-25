@@ -2,8 +2,8 @@
 
 #include <string>
 
-namespace cappuccino {
-
+namespace cappuccino
+{
 /**
  * Used in a few caches to allow for the user to 'peek' at an item without
  * updating its access pattern within the cache.
@@ -16,7 +16,6 @@ enum class Peek
     YES = 1
 };
 
-auto to_string(
-    Peek peek) -> const std::string&;
+auto to_string(Peek peek) -> const std::string&;
 
 } // namespace cappuccino

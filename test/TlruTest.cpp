@@ -1,22 +1,18 @@
-#pragma once
-
 #include "catch.hpp"
-
 #include <cappuccino/Cappuccino.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <thread>
 #include <variant>
-#include <iostream>
 
 using namespace cappuccino;
+using namespace std::chrono_literals;
 
 TEST_CASE("TTlru example")
 {
-    using namespace std::chrono_literals;
-
     // Create a cache with up to 3 items.
-    cappuccino::TlruCache<uint64_t, std::string> Tlru_cache { 3 };
+    TlruCache<uint64_t, std::string> Tlru_cache{3};
 
     // Insert "hello", "world" with different TTLs.
     Tlru_cache.Insert(1min, 1, "Hello");
@@ -39,10 +35,11 @@ TEST_CASE("TTlru example")
     Tlru_cache.Insert(10ms, 4, "Hola");
 
     {
-        auto hola = Tlru_cache.Find(4); // "hola" was just inserted, it will be found
+        auto hola  = Tlru_cache.Find(4); // "hola" was just inserted, it will be found
         auto hello = Tlru_cache.Find(1); // "hello" will also have a value, it is at the end of the Tlru list
         auto world = Tlru_cache.Find(2); // "world" is in the middle of our 3 Tlru list.
-        auto nope = Tlru_cache.Find(3); // "nope" was Tlru'ed when "hola" was inserted since "hello" and "world were fetched
+        auto nope =
+            Tlru_cache.Find(3); // "nope" was Tlru'ed when "hola" was inserted since "hello" and "world were fetched
 
         REQUIRE(hola.has_value());
         REQUIRE(hello.has_value());
@@ -54,7 +51,7 @@ TEST_CASE("TTlru example")
     std::this_thread::sleep_for(100ms);
 
     {
-        auto hola = Tlru_cache.Find(4);
+        auto hola  = Tlru_cache.Find(4);
         auto hello = Tlru_cache.Find(1);
         auto world = Tlru_cache.Find(2);
 
@@ -67,13 +64,13 @@ TEST_CASE("TTlru example")
 
 TEST_CASE("Tlru Find doesn't exist")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
 TEST_CASE("Tlru Insert Only")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -88,7 +85,7 @@ TEST_CASE("Tlru Insert Only")
 
 TEST_CASE("Tlru Update Only")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1min, 1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
@@ -97,7 +94,7 @@ TEST_CASE("Tlru Update Only")
 
 TEST_CASE("Tlru Insert Or Update")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1min, 1, "test"));
     auto value = cache.Find(1);
@@ -112,14 +109,11 @@ TEST_CASE("Tlru Insert Or Update")
 
 TEST_CASE("Tlru InsertRange Insert Only")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
         REQUIRE(inserted == 3);
@@ -135,12 +129,12 @@ TEST_CASE("Tlru InsertRange Insert Only")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" },
-            { 1min, 4, "test4" }, // new
-            { 1min, 5, "test5" }, // new
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"},
+            {1min, 2, "test2"},
+            {1min, 3, "test3"},
+            {1min, 4, "test4"}, // new
+            {1min, 5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -161,14 +155,11 @@ TEST_CASE("Tlru InsertRange Insert Only")
 
 TEST_CASE("Tlru InsertRange Update Only")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
         REQUIRE(inserted == 0);
@@ -182,14 +173,11 @@ TEST_CASE("Tlru InsertRange Update Only")
 
 TEST_CASE("Tlru InsertRange Insert Or Update")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -204,12 +192,12 @@ TEST_CASE("Tlru InsertRange Insert Or Update")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 2, "test2" }, // make 2 Tlru
-            { 1min, 1, "test1" },
-            { 1min, 3, "test3" },
-            { 1min, 4, "test4" }, // new
-            { 1min, 5, "test5" }, // new
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 2, "test2"}, // make 2 Tlru
+            {1min, 1, "test1"},
+            {1min, 3, "test3"},
+            {1min, 4, "test4"}, // new
+            {1min, 5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -230,7 +218,7 @@ TEST_CASE("Tlru InsertRange Insert Or Update")
 
 TEST_CASE("Tlru Delete")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -249,14 +237,11 @@ TEST_CASE("Tlru Delete")
 
 TEST_CASE("Tlru DeleteRange")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -268,7 +253,7 @@ TEST_CASE("Tlru DeleteRange")
     REQUIRE(cache.Find(3).has_value());
 
     {
-        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
+        std::vector<uint64_t> delete_keys{1, 3, 4, 5};
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -285,14 +270,11 @@ TEST_CASE("Tlru DeleteRange")
 
 TEST_CASE("Tlru FindRange")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -300,8 +282,8 @@ TEST_CASE("Tlru FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys { 1, 2, 3 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 2, 3};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -316,8 +298,8 @@ TEST_CASE("Tlru FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys { 1, 3, 4, 5 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 3, 4, 5};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -334,14 +316,11 @@ TEST_CASE("Tlru FindRange")
 
 TEST_CASE("Tlru FindRangeFill")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts {
-            { 1min, 1, "test1" },
-            { 1min, 2, "test2" },
-            { 1min, 3, "test3" }
-        };
+        std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
+            {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -349,10 +328,10 @@ TEST_CASE("Tlru FindRangeFill")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 2, std::nullopt },
-            { 3, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {2, std::nullopt},
+            {3, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -369,11 +348,11 @@ TEST_CASE("Tlru FindRangeFill")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 3, std::nullopt },
-            { 4, std::nullopt },
-            { 5, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {3, std::nullopt},
+            {4, std::nullopt},
+            {5, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -392,7 +371,7 @@ TEST_CASE("Tlru FindRangeFill")
 
 TEST_CASE("Tlru empty")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
@@ -403,7 +382,7 @@ TEST_CASE("Tlru empty")
 
 TEST_CASE("Tlru size + capacity")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -430,7 +409,7 @@ TEST_CASE("Tlru size + capacity")
 
 TEST_CASE("Tlru Find with Peek")
 {
-    TlruCache<uint64_t, std::string> cache { 4 };
+    TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1min, 1, "Hello"));
     REQUIRE(cache.Insert(1min, 2, "World"));
@@ -450,7 +429,7 @@ TEST_CASE("Tlru Find with Peek")
 
 TEST_CASE("Tlru differnet ttls")
 {
-    TlruCache<uint64_t, std::string> cache { 2 };
+    TlruCache<uint64_t, std::string> cache{2};
 
     REQUIRE(cache.Insert(10ms, 1, "Hello"));
     REQUIRE(cache.Insert(100ms, 2, "World"));
@@ -463,7 +442,7 @@ TEST_CASE("Tlru differnet ttls")
 
     auto hello = cache.Find(1);
     auto world = cache.Find(2);
-    auto hola = cache.Find(3);
+    auto hola  = cache.Find(3);
 
     REQUIRE_FALSE(hello.has_value());
     REQUIRE(world.has_value());
@@ -478,16 +457,16 @@ TEST_CASE("TlruCache Insert only long running test.")
     // with Allow::INSERT only and its the only item inserted that it will eventually
     // be evicted by its TTL.
 
-    cappuccino::TlruCache<std::string, std::monostate> cache{128};
+    TlruCache<std::string, std::monostate> cache{128};
 
     uint64_t inserted{0};
     uint64_t blocked{0};
 
     auto start = std::chrono::steady_clock::now();
 
-    while(inserted < 5)
+    while (inserted < 5)
     {
-        if(cache.Insert(1s, "test-key", std::monostate{}, cappuccino::Allow::INSERT))
+        if (cache.Insert(1s, "test-key", std::monostate{}, Allow::INSERT))
         {
             ++inserted;
             std::cout << "inserted=" << inserted << "\n";
