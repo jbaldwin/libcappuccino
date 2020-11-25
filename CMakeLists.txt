@@ -56,6 +56,11 @@ if(CAPPUCCINO_BUILD_EXAMPLES)
 endif()
 
 if(CAPPUCCINO_BUILD_TESTS)
+    if(CAPPUCCINO_CODE_COVERAGE)
+        target_compile_options(${PROJECT_NAME} PRIVATE --coverage)
+        target_link_libraries(${PROJECT_NAME} PRIVATE gcov)
+    endif()
+
     enable_testing()
     add_subdirectory(test)
 endif()

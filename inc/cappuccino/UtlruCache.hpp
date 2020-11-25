@@ -423,6 +423,18 @@ auto UtlruCache<KeyType, ValueType, SyncType>::doInsertUpdate(
             doUpdate(keyed_position, std::move(value), expire_time);
             return true;
         }
+        else if(insert_allowed(allow))
+        {
+            // If the item has expired and this is INSERT then allow the
+            // insert to proceed, this can just be an update in place.
+            const auto& [key, element_idx] = *keyed_position;
+            Element& element = m_elements[element_idx];
+            if(now >= element.m_expire_time)
+            {
+                doUpdate(keyed_position, std::move(value), expire_time);
+                return true;
+            }
+        }
     } else {
         if(insert_allowed(allow)) {
             doInsert(key, std::move(value), now, expire_time);

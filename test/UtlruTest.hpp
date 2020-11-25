@@ -6,6 +6,7 @@
 
 #include <chrono>
 #include <thread>
+#include <variant>
 
 using namespace cappuccino;
 
@@ -480,4 +481,45 @@ TEST_CASE("Utlru Clean with only some expired")
     REQUIRE_FALSE(world.has_value());
     REQUIRE(hola.has_value());
     REQUIRE(hola.value() == "Hola");
+}
+
+TEST_CASE("UtlruCache Insert only long running test.")
+{
+    // This test is to make sure that an item that is continuously inserted into the cache
+    // with Allow::INSERT only and its the only item inserted that it will eventually
+    // be evicted by its TTL.
+
+    cappuccino::UtlruCache<std::string, std::monostate> cache{1s, 128};
+
+    uint64_t inserted{0};
+    uint64_t blocked{0};
+
+    auto start = std::chrono::steady_clock::now();
+
+    while(inserted < 5)
+    {
+        if(cache.Insert("test-key", std::monostate{}, cappuccino::Allow::INSERT))
+        {
+            ++inserted;
+            std::cout << "inserted=" << inserted << "\n";
+            std::cout << "blocked=" << blocked << "\n";
+        }
+        else
+        {
+            ++blocked;
+        }
+        std::this_thread::sleep_for(1ms);
+    }
+
+    auto stop = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "total_inserted=" << inserted << "\n";
+    std::cout << "total_blocked=" << blocked << "\n";
+    std::cout << "total_elapsed=" << elapsed.count() << "\n\n";
+
+    REQUIRE(inserted == 5);
+    REQUIRE(blocked > inserted);
+    REQUIRE(elapsed >= std::chrono::milliseconds{4000});
 }
