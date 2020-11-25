@@ -12,21 +12,21 @@ https://github.com/jbaldwin/libcappuccino
 **libcappuccino** is licensed under the Apache 2.0 license.
 
 ## Overview
-  * Thread safe cache and associative datastructures.
-    * Can disable thread safety for singly threaded apps.
-  * The following eviction policies are currently supported:
-    * Cache (Fixed size contiguous memory).
-      * First in first out (FIFO).
-      * Least frequently used (LFU).
-      * Least frequently used with dynamic aging (LFUDA).
-      * Least recently used (LRU).
-      * Most recently used (MRU).
-      * Random Replacement (RR).
-      * Time aware least recently used (TLRU).
-      * Uniform time aware least recently used (UTLRU).
-    * Associative (Dynamic size non-contiguous memory).
-      * Uniform time aware set (UTSET).
-      * Uniform time aware map (UTMAP).
+*   Thread safe cache and associative datastructures.
+  *   Can disable thread safety for singly threaded apps.
+*   The following eviction policies are currently supported:
+  *   Cache (Fixed size contiguous memory).
+    *   First in first out (FIFO).
+    *   Least frequently used (LFU).
+    *   Least frequently used with dynamic aging (LFUDA).
+    *   Least recently used (LRU).
+    *   Most recently used (MRU).
+    *   Random Replacement (RR).
+    *   Time aware least recently used (TLRU).
+    *   Uniform time aware least recently used (UTLRU).
+  *   Associative (Dynamic size non-contiguous memory).
+    *   Uniform time aware set (UTSET).
+    *   Uniform time aware map (UTMAP).
 
 ## Usage
 
@@ -34,7 +34,6 @@ https://github.com/jbaldwin/libcappuccino
 
 See all of the examples under the examples/ directory.  Below are some simple examples
 to get your started on using libcappuccino.
-
 
 #### Indivudal item TTL Least Recently Used Example
 This example provides a individual item TTL LRU cache.  This means each item placed in the cache
@@ -189,12 +188,12 @@ include the following code to download the git repository and make it available 
 This project has a GitHub Actions CI implementation to compile and run unit tests.
 
 Currently tested distros:
-  * ubuntu:latest
-  * fedora:latest
+*   ubuntu:latest
+*   fedora:latest
 
 Currently tested compilers:
-  * g++-9
-  * clang-9
+*   g++-9
+*   clang-9
 
 Contributing a new feature should include relevant tests.  Examples
 are welcome if understanding how the feature works is difficult or provides some additional value the tests otherwise cannot.
