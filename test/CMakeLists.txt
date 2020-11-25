@@ -8,10 +8,10 @@ set(LIBCAPPUCCINO_TEST_SOURCE_FILES
     LruTest.hpp
     MruTest.hpp
     RrTest.hpp
-    UtMapTest.hpp
-    UtSetTest.hpp
     TlruTest.hpp
     UtlruTest.hpp
+    UtMapTest.hpp
+    UtSetTest.hpp
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${LIBCAPPUCCINO_TEST_SOURCE_FILES})
