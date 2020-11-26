@@ -3,15 +3,12 @@
 #include <chrono>
 #include <iostream>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     using namespace std::chrono_literals;
 
     // Create a cache with up to 3 items.
-    cappuccino::TlruCache<uint64_t, std::string> lru_cache { 3 };
+    cappuccino::TlruCache<uint64_t, std::string> lru_cache{3};
 
     // Insert "hello", "world" with different TTLs.
     lru_cache.Insert(1h, 1, "Hello");
@@ -33,24 +30,29 @@ int main(int argc, char* argv[])
     lru_cache.Insert(30min, 4, "Hola");
 
     {
-        auto hola = lru_cache.Find(4); // "hola" was just inserted, it will be found
+        auto hola  = lru_cache.Find(4); // "hola" was just inserted, it will be found
         auto hello = lru_cache.Find(1); // "hello" will also have a value, it is at the end of the lru list
         auto world = lru_cache.Find(2); // "world" is in the middle of our 3 lru list.
-        auto nope = lru_cache.Find(3); // "nope" was lru'ed when "hola" was inserted since "hello" and "world were fetched
+        auto nope  = lru_cache.Find(3); // "nope" was lru'ed when "hola" was inserted
+                                        // since "hello" and "world were fetched
 
-        if (hola.has_value()) {
+        if (hola.has_value())
+        {
             std::cout << hola.value() << "\n";
         }
 
-        if (hello.has_value()) {
+        if (hello.has_value())
+        {
             std::cout << hello.value() << "\n";
         }
 
-        if (world.has_value()) {
+        if (world.has_value())
+        {
             std::cout << world.value() << "\n";
         }
 
-        if (!nope.has_value()) {
+        if (!nope.has_value())
+        {
             std::cout << "Nope was LRU'ed out of the cache.\n";
         }
     }

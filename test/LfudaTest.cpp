@@ -1,69 +1,89 @@
-#pragma once
-
 #include "catch.hpp"
-
 #include <cappuccino/Cappuccino.hpp>
 
-#include <chrono>
 #include <thread>
 
 using namespace cappuccino;
+using namespace std::chrono_literals;
 
-TEST_CASE("UtUtlru example")
+TEST_CASE("Lfuda example")
 {
-    using namespace std::chrono_literals;
+    // Create a cache with 2 items, 10ms age time with halving dynamic aging ratio.
+    LfudaCache<uint64_t, std::string> cache{2, 10ms, 0.5f};
 
-    // Create a cache with 2 items and a uniform TTL of 20ms.
-    cappuccino::UtlruCache<uint64_t, std::string> cache { 20ms, 2 };
-
-    // Insert "hello" and "world".
+    // Insert some data.
     cache.Insert(1, "Hello");
     cache.Insert(2, "World");
 
+    // Make 1 have a use count of 20
+    for (size_t i = 1; i < 20; ++i)
     {
-        // Fetch the items from the catch, this will update their Utlru positions.
-        auto hello = cache.Find(1);
-        auto world = cache.Find(2);
-
-        REQUIRE(hello.has_value());
-        REQUIRE(world.has_value());
-
-        REQUIRE(hello.value() == "Hello");
-        REQUIRE(world.value() == "World");
+        cache.Find(1);
+    }
+    // Make 2 have a use count of 22
+    for (size_t i = 1; i < 22; ++i)
+    {
+        cache.Find(2);
     }
 
-    // Insert "Hola", this will replace "Hello" since its the oldest Utlru item
-    // and nothing has expired yet.
-    cache.Insert(3, "Hola");
+    // wait an ~order of magnitude long enough to dynamically age.
+    std::this_thread::sleep_for(50ms);
 
+    // // Manually dynamic age to see its effect
+    auto aged_count = cache.DynamicallyAge();
+    REQUIRE(aged_count == 2);
     {
-        auto hola = cache.Find(3);
-        auto hello = cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
-        auto world = cache.Find(2);
-
-        REQUIRE(hola.has_value());
-        REQUIRE_FALSE(hello.has_value());
-        REQUIRE(world.has_value());
+        {
+            auto foo = cache.FindWithUseCount(1);
+            REQUIRE(foo.has_value());
+            const auto& [value, use_count] = foo.value();
+            REQUIRE(value == "Hello");
+            REQUIRE(use_count == 11); // dynamic age 20 => 10 + 1 find
+        }
+        {
+            auto bar = cache.FindWithUseCount(2);
+            REQUIRE(bar.has_value());
+            const auto& [value, use_count] = bar.value();
+            REQUIRE(value == "World");
+            REQUIRE(use_count == 12); // dynamic age 22 => 11 + 1 find
+        }
     }
 
-    // Sleep for an ~order of magnitude longer than the TTL.
-    std::this_thread::sleep_for(100ms);
+    // Insert 3, 1 should be replaced as it will dynamically age
+    // down to 10, while 2 will dynamically age down to 11.
+    cache.Insert(3, "Hello World");
 
-    // Manually trigger a clean since no insert/delete is wanted.
-    auto cleaned_count = cache.CleanExpiredValues();
-    REQUIRE(cleaned_count == 2);
-    REQUIRE(cache.empty());
+    {
+        auto foo    = cache.FindWithUseCount(1);
+        auto bar    = cache.FindWithUseCount(2);
+        auto foobar = cache.FindWithUseCount(3);
+
+        REQUIRE_FALSE(foo.has_value());
+        REQUIRE(bar.has_value());
+        REQUIRE(foobar.has_value());
+
+        {
+            const auto& [value, use_count] = bar.value();
+            REQUIRE(value == "World");
+            REQUIRE(use_count == 13);
+        }
+        {
+            const auto& [value, use_count] = foobar.value();
+            REQUIRE(value == "Hello World");
+            REQUIRE(use_count == 2);
+        }
+    }
 }
 
-TEST_CASE("Utlru Find doesn't exist")
+TEST_CASE("Lfuda Find doesn't exist")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Utlru Insert Only")
+TEST_CASE("Lfuda Insert Only")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -76,18 +96,18 @@ TEST_CASE("Utlru Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Utlru Update Only")
+TEST_CASE("Lfuda Update Only")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Utlru Insert Or Update")
+TEST_CASE("Lfuda Insert Or Update")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -100,37 +120,32 @@ TEST_CASE("Utlru Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Utlru InsertRange Insert Only")
+TEST_CASE("Lfuda InsertRange Insert Only")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
         REQUIRE(inserted == 3);
     }
 
     REQUIRE(cache.size() == 3);
-
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2"); // make 2 Utlru
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {1, "test1"},
+            {2, "test2"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -140,25 +155,21 @@ TEST_CASE("Utlru InsertRange Insert Only")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Utlru InsertRange Update Only")
+TEST_CASE("Lfuda InsertRange Update Only")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
         REQUIRE(inserted == 0);
@@ -170,16 +181,12 @@ TEST_CASE("Utlru InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Utlru InsertRange Insert Or Update")
+TEST_CASE("Lfuda InsertRange Insert Or Update")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -194,12 +201,12 @@ TEST_CASE("Utlru InsertRange Insert Or Update")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 2, "test2" }, // make 2 Utlru
-            { 1, "test1" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {1, "test1"},
+            {2, "test2"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -209,18 +216,18 @@ TEST_CASE("Utlru InsertRange Insert Or Update")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Utlru Delete")
+TEST_CASE("Lfuda Delete")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -237,16 +244,12 @@ TEST_CASE("Utlru Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Utlru DeleteRange")
+TEST_CASE("Lfuda DeleteRange")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -258,7 +261,7 @@ TEST_CASE("Utlru DeleteRange")
     REQUIRE(cache.Find(3).has_value());
 
     {
-        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
+        std::vector<uint64_t> delete_keys{1, 3, 4, 5};
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -273,16 +276,12 @@ TEST_CASE("Utlru DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Utlru FindRange")
+TEST_CASE("Lfuda FindRange")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -290,8 +289,8 @@ TEST_CASE("Utlru FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys { 1, 2, 3 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 2, 3};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -306,8 +305,8 @@ TEST_CASE("Utlru FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys { 1, 3, 4, 5 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 3, 4, 5};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -322,16 +321,12 @@ TEST_CASE("Utlru FindRange")
     }
 }
 
-TEST_CASE("Utlru FindRangeFill")
+TEST_CASE("Lfuda FindRangeFill")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -339,10 +334,10 @@ TEST_CASE("Utlru FindRangeFill")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 2, std::nullopt },
-            { 3, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {2, std::nullopt},
+            {3, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -359,11 +354,11 @@ TEST_CASE("Utlru FindRangeFill")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 3, std::nullopt },
-            { 4, std::nullopt },
-            { 5, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {3, std::nullopt},
+            {4, std::nullopt},
+            {5, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -380,9 +375,9 @@ TEST_CASE("Utlru FindRangeFill")
     }
 }
 
-TEST_CASE("Utlru empty")
+TEST_CASE("Lfuda empty")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -391,9 +386,9 @@ TEST_CASE("Utlru empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Utlru size + capacity")
+TEST_CASE("Lfuda size + capacity")
 {
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -416,68 +411,4 @@ TEST_CASE("Utlru size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
-}
-
-TEST_CASE("Utlru Find with Peek")
-{
-    UtlruCache<uint64_t, std::string> cache { 50ms, 4 };
-
-    REQUIRE(cache.Insert(1, "Hello"));
-    REQUIRE(cache.Insert(2, "World"));
-    REQUIRE(cache.Insert(3, "Hola"));
-    REQUIRE(cache.Insert(4, "Mondo"));
-
-    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(2, Peek::NO).has_value());
-    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(4, Peek::NO).has_value());
-
-    REQUIRE(cache.Insert(5, "another one bites the dust1"));
-    REQUIRE_FALSE(cache.Find(1).has_value());
-    REQUIRE(cache.Insert(6, "another one bites the dust2"));
-    REQUIRE_FALSE(cache.Find(3).has_value());
-}
-
-TEST_CASE("Utlru ttls")
-{
-    UtlruCache<uint64_t, std::string> cache { 20ms, 2 };
-
-    REQUIRE(cache.Insert(1, "Hello"));
-    REQUIRE(cache.Insert(2, "World"));
-
-    std::this_thread::sleep_for(50ms);
-
-    REQUIRE(cache.Insert(3, "Hola"));
-
-    auto hello = cache.Find(1);
-    auto world = cache.Find(2);
-    auto hola = cache.Find(3);
-
-    REQUIRE_FALSE(hello.has_value());
-    REQUIRE_FALSE(world.has_value());
-    REQUIRE(hola.has_value());
-    REQUIRE(hola.value() == "Hola");
-}
-
-TEST_CASE("Utlru Clean with only some expired")
-{
-    UtlruCache<uint64_t, std::string> cache { 25ms, 2 };
-
-    REQUIRE(cache.Insert(1, "Hello"));
-    REQUIRE(cache.Insert(2, "World"));
-
-    std::this_thread::sleep_for(50ms);
-
-    REQUIRE(cache.Insert(3, "Hola"));
-
-    cache.CleanExpiredValues();
-
-    auto hello = cache.Find(1);
-    auto world = cache.Find(2);
-    auto hola = cache.Find(3);
-
-    REQUIRE_FALSE(hello.has_value());
-    REQUIRE_FALSE(world.has_value());
-    REQUIRE(hola.has_value());
-    REQUIRE(hola.value() == "Hola");
 }

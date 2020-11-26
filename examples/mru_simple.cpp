@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     (void)argv;
 
     // Create a cache with 2 items.
-    cappuccino::MruCache<uint64_t, std::string> mru_cache { 2 };
+    cappuccino::MruCache<uint64_t, std::string> mru_cache{2};
 
     // Insert hello and world.
     mru_cache.Insert(1, "Hello");
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     mru_cache.Insert(3, "Hola");
 
     {
-        auto hola = mru_cache.Find(3);
+        auto hola  = mru_cache.Find(3);
         auto hello = mru_cache.Find(1); // this will exist
         auto world = mru_cache.Find(2); // this value will no longer be available.
 
@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
         std::cout << hola.value() << ", " << hello.value() << "!" << std::endl;
 
         // No value should be present in the cache for the world key.
-        if (world.has_value()) {
+        if (world.has_value())
+        {
             std::cout << "impossibru!" << std::endl;
         }
     }

@@ -1,78 +1,64 @@
-#pragma once
-
 #include "catch.hpp"
-
 #include <cappuccino/Cappuccino.hpp>
 
 using namespace cappuccino;
 
-TEST_CASE("Fifo example")
+TEST_CASE("RR example")
 {
-    // Create a cache with 4 items.
-    FifoCache<uint64_t, std::string> cache { 4 };
+    // Create a cache with 2 items.
+    RrCache<uint64_t, std::string> rr_cache{2};
 
-    // Insert some data.
-    cache.Insert(1, "one");
-    cache.Insert(2, "two");
-    cache.Insert(3, "three");
-    cache.Insert(4, "four");
+    // Insert hello and world.
+    rr_cache.Insert(1, "Hello");
+    rr_cache.Insert(2, "World");
 
     {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
+        // Grab them
+        auto hello = rr_cache.Find(1);
+        auto world = rr_cache.Find(2);
 
-        REQUIRE(one.has_value());
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
+        REQUIRE(hello.has_value());
+        REQUIRE(world.has_value());
+
+        REQUIRE(hello.value() == "Hello");
+        REQUIRE(world.value() == "World");
     }
 
-    cache.Insert(5, "five");
+    // Insert hola, this will replace "Hello" or "World", we don't know!
+    rr_cache.Insert(3, "Hola");
 
     {
-        auto one = cache.Find(1);
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
+        auto hola  = rr_cache.Find(3); // This will be in the cache.
+        auto hello = rr_cache.Find(1); // This might be in the cache?
+        auto world = rr_cache.Find(2); // This might be in the cache?
 
-        REQUIRE(!one.has_value());
+        REQUIRE(hola.has_value());
+        REQUIRE(hola.value() == "Hola");
 
-        REQUIRE(two.has_value());
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
-    }
+        size_t count{0};
+        if (hello.has_value())
+        {
+            ++count;
+        }
+        if (world.has_value())
+        {
+            ++count;
+        }
 
-    cache.Insert(6, "six");
-
-    {
-        auto two = cache.Find(2);
-        auto three = cache.Find(3);
-        auto four = cache.Find(4);
-        auto five = cache.Find(5);
-        auto six = cache.Find(6);
-
-        REQUIRE(!two.has_value());
-
-        REQUIRE(three.has_value());
-        REQUIRE(four.has_value());
-        REQUIRE(five.has_value());
-        REQUIRE(six.has_value());
+        // One of hello or world will be randomly evicted, which we don't know.
+        REQUIRE(count == 1);
     }
 }
 
-TEST_CASE("Fifo Find doesn't exist")
+TEST_CASE("Rr Find doesn't exist")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Fifo Insert Only")
+TEST_CASE("Rr Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -85,18 +71,18 @@ TEST_CASE("Fifo Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Fifo Update Only")
+TEST_CASE("Rr Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Fifo Insert Or Update")
+TEST_CASE("Rr Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -109,36 +95,33 @@ TEST_CASE("Fifo Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Fifo InsertRange Insert Only")
+TEST_CASE("Rr InsertRange Insert Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
         REQUIRE(inserted == 3);
     }
 
     REQUIRE(cache.size() == 3);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
+
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {1, "test1"},
+            {2, "test2"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -146,27 +129,23 @@ TEST_CASE("Fifo InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
-    REQUIRE(cache.Find(3).has_value());
-    REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
-    REQUIRE(cache.Find(5).has_value());
-    REQUIRE(cache.Find(5).value() == "test5");
+    // Non deterministic which values are still in the cache, but should be size 4.
+
+    size_t count{0};
+    count += cache.Find(1).has_value() ? 1 : 0;
+    count += cache.Find(2).has_value() ? 1 : 0;
+    count += cache.Find(3).has_value() ? 1 : 0;
+    count += cache.Find(4).has_value() ? 1 : 0;
+    count += cache.Find(5).has_value() ? 1 : 0;
+    REQUIRE(count == 4);
 }
 
-TEST_CASE("Fifo InsertRange Update Only")
+TEST_CASE("Rr InsertRange Update Only")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
         REQUIRE(inserted == 0);
@@ -178,16 +157,12 @@ TEST_CASE("Fifo InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Fifo InsertRange Insert Or Update")
+TEST_CASE("Rr InsertRange Insert Or Update")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -202,12 +177,12 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {2, "test2"}, // make 2 Rr
+            {1, "test1"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -215,20 +190,20 @@ TEST_CASE("Fifo InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
-    REQUIRE(cache.Find(3).has_value());
-    REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
-    REQUIRE(cache.Find(5).has_value());
-    REQUIRE(cache.Find(5).value() == "test5");
+    // Non deterministic which values are still in the cache, but should be size 4.
+
+    size_t count{0};
+    count += cache.Find(1).has_value() ? 1 : 0;
+    count += cache.Find(2).has_value() ? 1 : 0;
+    count += cache.Find(3).has_value() ? 1 : 0;
+    count += cache.Find(4).has_value() ? 1 : 0;
+    count += cache.Find(5).has_value() ? 1 : 0;
+    REQUIRE(count == 4);
 }
 
-TEST_CASE("Fifo Delete")
+TEST_CASE("Rr Delete")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -245,16 +220,12 @@ TEST_CASE("Fifo Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Fifo DeleteRange")
+TEST_CASE("Rr DeleteRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -266,7 +237,7 @@ TEST_CASE("Fifo DeleteRange")
     REQUIRE(cache.Find(3).has_value());
 
     {
-        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
+        std::vector<uint64_t> delete_keys{1, 3, 4, 5};
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -281,16 +252,12 @@ TEST_CASE("Fifo DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Fifo FindRange")
+TEST_CASE("Rr FindRange")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -298,8 +265,8 @@ TEST_CASE("Fifo FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys { 1, 2, 3 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 2, 3};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -314,8 +281,8 @@ TEST_CASE("Fifo FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys { 1, 3, 4, 5 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 3, 4, 5};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -330,16 +297,12 @@ TEST_CASE("Fifo FindRange")
     }
 }
 
-TEST_CASE("Fifo FindRangeFill")
+TEST_CASE("Rr FindRangeFill")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -347,10 +310,10 @@ TEST_CASE("Fifo FindRangeFill")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 2, std::nullopt },
-            { 3, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {2, std::nullopt},
+            {3, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -367,11 +330,11 @@ TEST_CASE("Fifo FindRangeFill")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 3, std::nullopt },
-            { 4, std::nullopt },
-            { 5, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {3, std::nullopt},
+            {4, std::nullopt},
+            {5, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -388,9 +351,9 @@ TEST_CASE("Fifo FindRangeFill")
     }
 }
 
-TEST_CASE("Fifo empty")
+TEST_CASE("Rr empty")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -399,9 +362,9 @@ TEST_CASE("Fifo empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Fifo size + capacity")
+TEST_CASE("Rr size + capacity")
 {
-    FifoCache<uint64_t, std::string> cache { 4 };
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 

@@ -1,7 +1,4 @@
-#pragma once
-
 #include "catch.hpp"
-
 #include <cappuccino/Cappuccino.hpp>
 
 using namespace cappuccino;
@@ -9,7 +6,7 @@ using namespace cappuccino;
 TEST_CASE("Lru example")
 {
     // Create a cache with 2 items.
-    cappuccino::LruCache<uint64_t, std::string> lru_cache { 2 };
+    LruCache<uint64_t, std::string> lru_cache{2};
 
     // Insert hello and world.
     lru_cache.Insert(1, "Hello");
@@ -31,7 +28,7 @@ TEST_CASE("Lru example")
     lru_cache.Insert(3, "Hola");
 
     {
-        auto hola = lru_cache.Find(3);
+        auto hola  = lru_cache.Find(3);
         auto hello = lru_cache.Find(1); // this will return an empty optional now
         auto world = lru_cache.Find(2); // this value should still be available!
 
@@ -43,13 +40,13 @@ TEST_CASE("Lru example")
 
 TEST_CASE("Lru Find doesn't exist")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
 TEST_CASE("Lru Insert Only")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -64,7 +61,7 @@ TEST_CASE("Lru Insert Only")
 
 TEST_CASE("Lru Update Only")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
@@ -73,7 +70,7 @@ TEST_CASE("Lru Update Only")
 
 TEST_CASE("Lru Insert Or Update")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -88,14 +85,10 @@ TEST_CASE("Lru Insert Or Update")
 
 TEST_CASE("Lru InsertRange Insert Only")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
         REQUIRE(inserted == 3);
@@ -111,12 +104,12 @@ TEST_CASE("Lru InsertRange Insert Only")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {1, "test1"},
+            {2, "test2"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
@@ -137,14 +130,10 @@ TEST_CASE("Lru InsertRange Insert Only")
 
 TEST_CASE("Lru InsertRange Update Only")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
         REQUIRE(inserted == 0);
@@ -158,14 +147,10 @@ TEST_CASE("Lru InsertRange Update Only")
 
 TEST_CASE("Lru InsertRange Insert Or Update")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -180,12 +165,12 @@ TEST_CASE("Lru InsertRange Insert Or Update")
     REQUIRE(cache.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 2, "test2" }, // make 2 LRU
-            { 1, "test1" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {2, "test2"}, // make 2 LRU
+            {1, "test1"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = cache.InsertRange(std::move(inserts));
@@ -206,7 +191,7 @@ TEST_CASE("Lru InsertRange Insert Or Update")
 
 TEST_CASE("Lru Delete")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -225,14 +210,10 @@ TEST_CASE("Lru Delete")
 
 TEST_CASE("Lru DeleteRange")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -244,7 +225,7 @@ TEST_CASE("Lru DeleteRange")
     REQUIRE(cache.Find(3).has_value());
 
     {
-        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
+        std::vector<uint64_t> delete_keys{1, 3, 4, 5};
 
         auto deleted = cache.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -261,14 +242,10 @@ TEST_CASE("Lru DeleteRange")
 
 TEST_CASE("Lru FindRange")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -276,8 +253,8 @@ TEST_CASE("Lru FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys { 1, 2, 3 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 2, 3};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -292,8 +269,8 @@ TEST_CASE("Lru FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys { 1, 3, 4, 5 };
-        auto items = cache.FindRange(keys);
+        std::vector<uint64_t> keys{1, 3, 4, 5};
+        auto                  items = cache.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -310,14 +287,10 @@ TEST_CASE("Lru FindRange")
 
 TEST_CASE("Lru FindRangeFill")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = cache.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -325,10 +298,10 @@ TEST_CASE("Lru FindRangeFill")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 2, std::nullopt },
-            { 3, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {2, std::nullopt},
+            {3, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -345,11 +318,11 @@ TEST_CASE("Lru FindRangeFill")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 3, std::nullopt },
-            { 4, std::nullopt },
-            { 5, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {3, std::nullopt},
+            {4, std::nullopt},
+            {5, std::nullopt},
         };
         cache.FindRangeFill(items);
 
@@ -368,7 +341,7 @@ TEST_CASE("Lru FindRangeFill")
 
 TEST_CASE("Lru empty")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -379,7 +352,7 @@ TEST_CASE("Lru empty")
 
 TEST_CASE("Lru size + capacity")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -406,7 +379,7 @@ TEST_CASE("Lru size + capacity")
 
 TEST_CASE("Lru Find with Peek")
 {
-    LruCache<uint64_t, std::string> cache { 4 };
+    LruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "Hello"));
     REQUIRE(cache.Insert(2, "World"));

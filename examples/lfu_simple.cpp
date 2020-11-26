@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     (void)argv;
 
     // Create a cache with 2 items.
-    cappuccino::LfuCache<std::string, std::string> lfu_cache { 2 };
+    cappuccino::LfuCache<std::string, std::string> lfu_cache{2};
 
     // Insert some data.
     lfu_cache.Insert("foo", "Hello");
@@ -18,26 +18,34 @@ int main(int argc, char* argv[])
     auto foo1 = lfu_cache.Find("foo");
     auto foo2 = lfu_cache.Find("foo");
 
+    (void)foo1;
+    (void)foo2;
+
     // Touch bar once.
     auto bar1 = lfu_cache.Find("bar");
+
+    (void)bar1;
 
     // Insert foobar, bar should be replaced.
     lfu_cache.Insert("foobar", "Hello World");
 
     auto bar2 = lfu_cache.FindWithUseCount("bar");
-    if (bar2.has_value()) {
+    if (bar2.has_value())
+    {
         std::cout << "bar2 should not have a value!" << std::endl;
     }
 
-    auto foo3 = lfu_cache.FindWithUseCount("foo");
+    auto foo3   = lfu_cache.FindWithUseCount("foo");
     auto foobar = lfu_cache.FindWithUseCount("foobar");
 
-    if (foo3.has_value()) {
+    if (foo3.has_value())
+    {
         auto& [value, use_count] = foo3.value();
         std::cout << "foo=" << value << " use_count=" << use_count << std::endl;
     }
 
-    if (foobar.has_value()) {
+    if (foobar.has_value())
+    {
         auto& [value, use_count] = foobar.value();
         std::cout << "foobar=" << value << " use_count=" << use_count << std::endl;
     }

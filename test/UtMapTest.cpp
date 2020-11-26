@@ -1,20 +1,18 @@
-#pragma once
-
 #include "catch.hpp"
-
 #include <cappuccino/Cappuccino.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <thread>
+#include <variant>
 
 using namespace cappuccino;
+using namespace std::chrono_literals;
 
 TEST_CASE("UtMap example")
 {
-    using namespace std::chrono_literals;
-
     // Create a map with 2 items and a uniform TTL of 20ms.
-    UtMap<std::string, bool> map { 20ms };
+    UtMap<std::string, bool> map{20ms};
 
     // Insert "hello" and "world".
     map.Insert("Hello", false);
@@ -43,13 +41,13 @@ TEST_CASE("UtMap example")
 
 TEST_CASE("UtMap Find doesn't exist")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
     REQUIRE_FALSE(map.Find(100).has_value());
 }
 
 TEST_CASE("UtMap Insert Only")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE(map.Insert(1, "test", Allow::INSERT));
     auto value = map.Find(1);
@@ -64,7 +62,7 @@ TEST_CASE("UtMap Insert Only")
 
 TEST_CASE("UtMap Update Only")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE_FALSE(map.Insert(1, "test", Allow::UPDATE));
     auto value = map.Find(1);
@@ -73,7 +71,7 @@ TEST_CASE("UtMap Update Only")
 
 TEST_CASE("UtMap Insert Or Update")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE(map.Insert(1, "test"));
     auto value = map.Find(1);
@@ -88,14 +86,10 @@ TEST_CASE("UtMap Insert Or Update")
 
 TEST_CASE("UtMap InsertRange Insert Only")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts), Allow::INSERT);
         REQUIRE(inserted == 3);
@@ -111,12 +105,12 @@ TEST_CASE("UtMap InsertRange Insert Only")
     REQUIRE(map.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {1, "test1"},
+            {2, "test2"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = map.InsertRange(std::move(inserts), Allow::INSERT);
@@ -137,14 +131,10 @@ TEST_CASE("UtMap InsertRange Insert Only")
 
 TEST_CASE("UtMap InsertRange Update Only")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts), Allow::UPDATE);
         REQUIRE(inserted == 0);
@@ -158,14 +148,10 @@ TEST_CASE("UtMap InsertRange Update Only")
 
 TEST_CASE("UtMap InsertRange Insert Or Update")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -180,12 +166,12 @@ TEST_CASE("UtMap InsertRange Insert Or Update")
     REQUIRE(map.Find(3).value() == "test3");
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 2, "test2" },
-            { 1, "test1" },
-            { 3, "test3" },
-            { 4, "test4" }, // new
-            { 5, "test5" }, // new
+        std::vector<std::pair<uint64_t, std::string>> inserts{
+            {2, "test2"},
+            {1, "test1"},
+            {3, "test3"},
+            {4, "test4"}, // new
+            {5, "test5"}, // new
         };
 
         auto inserted = map.InsertRange(std::move(inserts));
@@ -206,7 +192,7 @@ TEST_CASE("UtMap InsertRange Insert Or Update")
 
 TEST_CASE("UtMap Delete")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE(map.Insert(1, "test", Allow::INSERT));
     auto value = map.Find(1);
@@ -225,14 +211,10 @@ TEST_CASE("UtMap Delete")
 
 TEST_CASE("UtMap DeleteRange")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -244,7 +226,7 @@ TEST_CASE("UtMap DeleteRange")
     REQUIRE(map.Find(3).has_value());
 
     {
-        std::vector<uint64_t> delete_keys { 1, 3, 4, 5 };
+        std::vector<uint64_t> delete_keys{1, 3, 4, 5};
 
         auto deleted = map.DeleteRange(delete_keys);
         REQUIRE(deleted == 2);
@@ -261,14 +243,10 @@ TEST_CASE("UtMap DeleteRange")
 
 TEST_CASE("UtMap FindRange")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -276,8 +254,8 @@ TEST_CASE("UtMap FindRange")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<uint64_t> keys { 1, 2, 3 };
-        auto items = map.FindRange(keys);
+        std::vector<uint64_t> keys{1, 2, 3};
+        auto                  items = map.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -292,8 +270,8 @@ TEST_CASE("UtMap FindRange")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<uint64_t> keys { 1, 3, 4, 5 };
-        auto items = map.FindRange(keys);
+        std::vector<uint64_t> keys{1, 3, 4, 5};
+        auto                  items = map.FindRange(keys);
 
         REQUIRE(items[0].first == 1);
         REQUIRE(items[0].second.has_value());
@@ -310,14 +288,10 @@ TEST_CASE("UtMap FindRange")
 
 TEST_CASE("UtMap FindRangeFill")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     {
-        std::vector<std::pair<uint64_t, std::string>> inserts {
-            { 1, "test1" },
-            { 2, "test2" },
-            { 3, "test3" }
-        };
+        std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
         auto inserted = map.InsertRange(std::move(inserts));
         REQUIRE(inserted == 3);
@@ -325,10 +299,10 @@ TEST_CASE("UtMap FindRangeFill")
 
     // Make sure all inserted keys exists via find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 2, std::nullopt },
-            { 3, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {2, std::nullopt},
+            {3, std::nullopt},
         };
         map.FindRangeFill(items);
 
@@ -345,11 +319,11 @@ TEST_CASE("UtMap FindRangeFill")
 
     // Make sure keys not inserted are not found by find range.
     {
-        std::vector<std::pair<uint64_t, std::optional<std::string>>> items {
-            { 1, std::nullopt },
-            { 3, std::nullopt },
-            { 4, std::nullopt },
-            { 5, std::nullopt },
+        std::vector<std::pair<uint64_t, std::optional<std::string>>> items{
+            {1, std::nullopt},
+            {3, std::nullopt},
+            {4, std::nullopt},
+            {5, std::nullopt},
         };
         map.FindRangeFill(items);
 
@@ -368,7 +342,7 @@ TEST_CASE("UtMap FindRangeFill")
 
 TEST_CASE("UtMap empty")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE(map.empty());
     REQUIRE(map.Insert(1, "test", Allow::INSERT));
@@ -379,7 +353,7 @@ TEST_CASE("UtMap empty")
 
 TEST_CASE("UtMap size")
 {
-    UtMap<uint64_t, std::string> map { 50ms };
+    UtMap<uint64_t, std::string> map{50ms};
 
     REQUIRE(map.Insert(1, "test1"));
     REQUIRE(map.size() == 1);
@@ -406,7 +380,7 @@ TEST_CASE("UtMap size")
 
 TEST_CASE("UtMap ttls")
 {
-    UtMap<uint64_t, std::string> map { 20ms };
+    UtMap<uint64_t, std::string> map{20ms};
 
     REQUIRE(map.Insert(1, "Hello"));
     REQUIRE(map.Insert(2, "World"));
@@ -417,7 +391,7 @@ TEST_CASE("UtMap ttls")
 
     auto hello = map.Find(1);
     auto world = map.Find(2);
-    auto hola = map.Find(3);
+    auto hola  = map.Find(3);
 
     REQUIRE_FALSE(hello.has_value());
     REQUIRE_FALSE(world.has_value());
@@ -427,7 +401,7 @@ TEST_CASE("UtMap ttls")
 
 TEST_CASE("UtMap Clean with only some expired")
 {
-    UtMap<uint64_t, std::string> map { 25ms };
+    UtMap<uint64_t, std::string> map{25ms};
 
     REQUIRE(map.Insert(1, "Hello"));
     REQUIRE(map.Insert(2, "World"));
@@ -440,7 +414,7 @@ TEST_CASE("UtMap Clean with only some expired")
 
     auto hello = map.Find(1);
     auto world = map.Find(2);
-    auto hola = map.Find(3);
+    auto hola  = map.Find(3);
 
     REQUIRE_FALSE(hello.has_value());
     REQUIRE_FALSE(world.has_value());
@@ -450,9 +424,10 @@ TEST_CASE("UtMap Clean with only some expired")
 
 TEST_CASE("UtMap bulk insert some expire")
 {
-    UtMap<uint64_t, uint64_t> map { 50ms };
+    UtMap<uint64_t, uint64_t> map{50ms};
 
-    for (uint64_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i)
+    {
         REQUIRE(map.Insert(i, i));
     }
 
@@ -463,18 +438,21 @@ TEST_CASE("UtMap bulk insert some expire")
     map.CleanExpiredValues();
     REQUIRE(map.size() == 0);
 
-    for (uint64_t i = 100; i < 200; ++i) {
+    for (uint64_t i = 100; i < 200; ++i)
+    {
         REQUIRE(map.Insert(i, i));
     }
 
     REQUIRE(map.size() == 100);
 
-    for (uint64_t i = 0; i < 100; ++i) {
+    for (uint64_t i = 0; i < 100; ++i)
+    {
         auto opt = map.Find(i);
         REQUIRE_FALSE(opt.has_value());
     }
 
-    for (uint64_t i = 100; i < 200; ++i) {
+    for (uint64_t i = 100; i < 200; ++i)
+    {
         REQUIRE(map.Find(i).has_value());
     }
 
@@ -483,7 +461,7 @@ TEST_CASE("UtMap bulk insert some expire")
 
 TEST_CASE("UtMap update TTLs some expire")
 {
-    UtMap<std::string, uint64_t> map {}; // 100ms default
+    UtMap<std::string, uint64_t> map{}; // 100ms default
 
     REQUIRE(map.Insert("Hello", 1));
     REQUIRE(map.Insert("World", 2));
@@ -518,7 +496,7 @@ TEST_CASE("UtMap update TTLs some expire")
 
 TEST_CASE("UtMap update element value")
 {
-    UtMap<std::string, uint64_t> map {}; // 100ms default
+    UtMap<std::string, uint64_t> map{}; // 100ms default
 
     REQUIRE(map.Insert("Hello", 1));
     REQUIRE(map.Insert("World", 2));
@@ -551,7 +529,7 @@ TEST_CASE("UtMap update element value")
 
 TEST_CASE("UtMap inserts, updates, and insert_or_update")
 {
-    UtMap<std::string, uint64_t> map {}; // 100ms default
+    UtMap<std::string, uint64_t> map{}; // 100ms default
 
     REQUIRE(map.Insert("Hello", 1, Allow::INSERT));
     REQUIRE(map.Insert("World", 2, Allow::INSERT_OR_UPDATE));
@@ -562,7 +540,7 @@ TEST_CASE("UtMap inserts, updates, and insert_or_update")
 
     auto hello = map.Find("Hello");
     auto world = map.Find("World");
-    auto hola = map.Find("Hola");
+    auto hola  = map.Find("Hola");
     auto frand = map.Find("Friend");
 
     REQUIRE(hello.has_value());
@@ -582,4 +560,45 @@ TEST_CASE("UtMap inserts, updates, and insert_or_update")
 
     REQUIRE(hello.has_value());
     REQUIRE(hello.value() == 6);
+}
+
+TEST_CASE("UtMap Insert only long running test.")
+{
+    // This test is to make sure that an item that is continuously inserted into
+    // the cache with Allow::INSERT only and its the only item inserted that it
+    // will eventually be evicted by its TTL.
+
+    UtMap<std::string, std::monostate> cache{1s};
+
+    uint64_t inserted{0};
+    uint64_t blocked{0};
+
+    auto start = std::chrono::steady_clock::now();
+
+    while (inserted < 5)
+    {
+        if (cache.Insert("test-key", std::monostate{}, Allow::INSERT))
+        {
+            ++inserted;
+            std::cout << "inserted=" << inserted << "\n";
+            std::cout << "blocked=" << blocked << "\n";
+        }
+        else
+        {
+            ++blocked;
+        }
+        std::this_thread::sleep_for(1ms);
+    }
+
+    auto stop = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "total_inserted=" << inserted << "\n";
+    std::cout << "total_blocked=" << blocked << "\n";
+    std::cout << "total_elapsed=" << elapsed.count() << "\n\n";
+
+    REQUIRE(inserted == 5);
+    REQUIRE(blocked > inserted);
+    REQUIRE(elapsed >= std::chrono::milliseconds{4000});
 }

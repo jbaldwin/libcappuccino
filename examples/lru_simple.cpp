@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
     (void)argv;
 
     // Create a cache with 2 items.
-    cappuccino::LruCache<uint64_t, std::string> lru_cache { 2 };
+    cappuccino::LruCache<uint64_t, std::string> lru_cache{2};
 
     // Insert hello and world.
     lru_cache.Insert(1, "Hello");
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
     lru_cache.Insert(3, "Hola");
 
     {
-        auto hola = lru_cache.Find(3);
+        auto hola  = lru_cache.Find(3);
         auto hello = lru_cache.Find(1); // this will return an empty optional now
         auto world = lru_cache.Find(2); // this value should still be available!
 
@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
         std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
 
         // No value should be present in the cache for the hello key.
-        if (hello.has_value()) {
+        if (hello.has_value())
+        {
             std::cout << "impossibru!" << std::endl;
         }
     }
