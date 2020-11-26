@@ -1,4 +1,4 @@
-#include "cappuccino/Allow.hpp"
+#include "cappuccino/allow.hpp"
 
 namespace cappuccino
 {

@@ -1,4 +1,4 @@
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
 
 int main()
 {

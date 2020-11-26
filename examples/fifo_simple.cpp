@@ -1,12 +1,9 @@
-#include "cappuccino/Cappuccino.hpp"
+#include <cappuccino/cappuccino.hpp>
 
 #include <iostream>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     // Create a cache with 2 items.
     cappuccino::FifoCache<uint64_t, std::string> fifo_cache{4};
 

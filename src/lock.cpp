@@ -1,4 +1,4 @@
-#include <cappuccino/Lock.hpp>
+#include <cappuccino/lock.hpp>
 
 namespace cappuccino
 {

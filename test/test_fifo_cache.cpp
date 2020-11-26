@@ -1,89 +1,75 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
-
-#include <thread>
+#include <cappuccino/cappuccino.hpp>
 
 using namespace cappuccino;
-using namespace std::chrono_literals;
 
-TEST_CASE("Lfuda example")
+TEST_CASE("Fifo example")
 {
-    // Create a cache with 2 items, 10ms age time with halving dynamic aging ratio.
-    LfudaCache<uint64_t, std::string> cache{2, 10ms, 0.5f};
+    // Create a cache with 4 items.
+    FifoCache<uint64_t, std::string> cache{4};
 
     // Insert some data.
-    cache.Insert(1, "Hello");
-    cache.Insert(2, "World");
+    cache.Insert(1, "one");
+    cache.Insert(2, "two");
+    cache.Insert(3, "three");
+    cache.Insert(4, "four");
 
-    // Make 1 have a use count of 20
-    for (size_t i = 1; i < 20; ++i)
     {
-        cache.Find(1);
-    }
-    // Make 2 have a use count of 22
-    for (size_t i = 1; i < 22; ++i)
-    {
-        cache.Find(2);
-    }
+        auto one   = cache.Find(1);
+        auto two   = cache.Find(2);
+        auto three = cache.Find(3);
+        auto four  = cache.Find(4);
 
-    // wait an ~order of magnitude long enough to dynamically age.
-    std::this_thread::sleep_for(50ms);
-
-    // // Manually dynamic age to see its effect
-    auto aged_count = cache.DynamicallyAge();
-    REQUIRE(aged_count == 2);
-    {
-        {
-            auto foo = cache.FindWithUseCount(1);
-            REQUIRE(foo.has_value());
-            const auto& [value, use_count] = foo.value();
-            REQUIRE(value == "Hello");
-            REQUIRE(use_count == 11); // dynamic age 20 => 10 + 1 find
-        }
-        {
-            auto bar = cache.FindWithUseCount(2);
-            REQUIRE(bar.has_value());
-            const auto& [value, use_count] = bar.value();
-            REQUIRE(value == "World");
-            REQUIRE(use_count == 12); // dynamic age 22 => 11 + 1 find
-        }
+        REQUIRE(one.has_value());
+        REQUIRE(two.has_value());
+        REQUIRE(three.has_value());
+        REQUIRE(four.has_value());
     }
 
-    // Insert 3, 1 should be replaced as it will dynamically age
-    // down to 10, while 2 will dynamically age down to 11.
-    cache.Insert(3, "Hello World");
+    cache.Insert(5, "five");
 
     {
-        auto foo    = cache.FindWithUseCount(1);
-        auto bar    = cache.FindWithUseCount(2);
-        auto foobar = cache.FindWithUseCount(3);
+        auto one   = cache.Find(1);
+        auto two   = cache.Find(2);
+        auto three = cache.Find(3);
+        auto four  = cache.Find(4);
+        auto five  = cache.Find(5);
 
-        REQUIRE_FALSE(foo.has_value());
-        REQUIRE(bar.has_value());
-        REQUIRE(foobar.has_value());
+        REQUIRE(!one.has_value());
 
-        {
-            const auto& [value, use_count] = bar.value();
-            REQUIRE(value == "World");
-            REQUIRE(use_count == 13);
-        }
-        {
-            const auto& [value, use_count] = foobar.value();
-            REQUIRE(value == "Hello World");
-            REQUIRE(use_count == 2);
-        }
+        REQUIRE(two.has_value());
+        REQUIRE(three.has_value());
+        REQUIRE(four.has_value());
+        REQUIRE(five.has_value());
+    }
+
+    cache.Insert(6, "six");
+
+    {
+        auto two   = cache.Find(2);
+        auto three = cache.Find(3);
+        auto four  = cache.Find(4);
+        auto five  = cache.Find(5);
+        auto six   = cache.Find(6);
+
+        REQUIRE(!two.has_value());
+
+        REQUIRE(three.has_value());
+        REQUIRE(four.has_value());
+        REQUIRE(five.has_value());
+        REQUIRE(six.has_value());
     }
 }
 
-TEST_CASE("Lfuda Find doesn't exist")
+TEST_CASE("Fifo Find doesn't exist")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Lfuda Insert Only")
+TEST_CASE("Fifo Insert Only")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -96,18 +82,18 @@ TEST_CASE("Lfuda Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Lfuda Update Only")
+TEST_CASE("Fifo Update Only")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Lfuda Insert Or Update")
+TEST_CASE("Fifo Insert Or Update")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -120,9 +106,9 @@ TEST_CASE("Lfuda Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Lfuda InsertRange Insert Only")
+TEST_CASE("Fifo InsertRange Insert Only")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -153,20 +139,20 @@ TEST_CASE("Lfuda InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
+    REQUIRE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(4).value() == "test4");
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Lfuda InsertRange Update Only")
+TEST_CASE("Fifo InsertRange Update Only")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -181,9 +167,9 @@ TEST_CASE("Lfuda InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Lfuda InsertRange Insert Or Update")
+TEST_CASE("Fifo InsertRange Insert Or Update")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -214,20 +200,20 @@ TEST_CASE("Lfuda InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE_FALSE(cache.Find(1).has_value()); // evicted by fifo policy
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
+    REQUIRE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(4).value() == "test4");
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Lfuda Delete")
+TEST_CASE("Fifo Delete")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -244,9 +230,9 @@ TEST_CASE("Lfuda Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Lfuda DeleteRange")
+TEST_CASE("Fifo DeleteRange")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -276,9 +262,9 @@ TEST_CASE("Lfuda DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Lfuda FindRange")
+TEST_CASE("Fifo FindRange")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -321,9 +307,9 @@ TEST_CASE("Lfuda FindRange")
     }
 }
 
-TEST_CASE("Lfuda FindRangeFill")
+TEST_CASE("Fifo FindRangeFill")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -375,9 +361,9 @@ TEST_CASE("Lfuda FindRangeFill")
     }
 }
 
-TEST_CASE("Lfuda empty")
+TEST_CASE("Fifo empty")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -386,9 +372,9 @@ TEST_CASE("Lfuda empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Lfuda size + capacity")
+TEST_CASE("Fifo size + capacity")
 {
-    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
+    FifoCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 

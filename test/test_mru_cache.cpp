@@ -1,21 +1,21 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
 
 using namespace cappuccino;
 
-TEST_CASE("RR example")
+TEST_CASE("Mru example")
 {
     // Create a cache with 2 items.
-    RrCache<uint64_t, std::string> rr_cache{2};
+    MruCache<uint64_t, std::string> mru_cache{2};
 
     // Insert hello and world.
-    rr_cache.Insert(1, "Hello");
-    rr_cache.Insert(2, "World");
+    mru_cache.Insert(1, "Hello");
+    mru_cache.Insert(2, "World");
 
     {
         // Grab them
-        auto hello = rr_cache.Find(1);
-        auto world = rr_cache.Find(2);
+        auto hello = mru_cache.Find(1);
+        auto world = mru_cache.Find(2);
 
         REQUIRE(hello.has_value());
         REQUIRE(world.has_value());
@@ -24,41 +24,29 @@ TEST_CASE("RR example")
         REQUIRE(world.value() == "World");
     }
 
-    // Insert hola, this will replace "Hello" or "World", we don't know!
-    rr_cache.Insert(3, "Hola");
+    // Insert hola, this will replace "World" since its the most recently used item.
+    mru_cache.Insert(3, "Hola");
 
     {
-        auto hola  = rr_cache.Find(3); // This will be in the cache.
-        auto hello = rr_cache.Find(1); // This might be in the cache?
-        auto world = rr_cache.Find(2); // This might be in the cache?
+        auto hola  = mru_cache.Find(3);
+        auto hello = mru_cache.Find(1); // this will exist
+        auto world = mru_cache.Find(2); // this value will no longer be available.
 
         REQUIRE(hola.has_value());
-        REQUIRE(hola.value() == "Hola");
-
-        size_t count{0};
-        if (hello.has_value())
-        {
-            ++count;
-        }
-        if (world.has_value())
-        {
-            ++count;
-        }
-
-        // One of hello or world will be randomly evicted, which we don't know.
-        REQUIRE(count == 1);
+        REQUIRE(hello.has_value());
+        REQUIRE_FALSE(world.has_value());
     }
 }
 
-TEST_CASE("Rr Find doesn't exist")
+TEST_CASE("Mru Find doesn't exist")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Rr Insert Only")
+TEST_CASE("Mru Insert Only")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -71,18 +59,18 @@ TEST_CASE("Rr Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Rr Update Only")
+TEST_CASE("Mru Update Only")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Rr Insert Or Update")
+TEST_CASE("Mru Insert Or Update")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -95,9 +83,9 @@ TEST_CASE("Rr Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Rr InsertRange Insert Only")
+TEST_CASE("Mru InsertRange Insert Only")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -108,10 +96,10 @@ TEST_CASE("Rr InsertRange Insert Only")
 
     REQUIRE(cache.size() == 3);
 
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
@@ -129,20 +117,22 @@ TEST_CASE("Rr InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    // Non deterministic which values are still in the cache, but should be size 4.
-
-    size_t count{0};
-    count += cache.Find(1).has_value() ? 1 : 0;
-    count += cache.Find(2).has_value() ? 1 : 0;
-    count += cache.Find(3).has_value() ? 1 : 0;
-    count += cache.Find(4).has_value() ? 1 : 0;
-    count += cache.Find(5).has_value() ? 1 : 0;
-    REQUIRE(count == 4);
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(3).has_value());
+    REQUIRE(cache.Find(3).value() == "test3");
+    // REQUIRE(cache.Find(4).has_value());
+    // REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(5).has_value());
+    REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Rr InsertRange Update Only")
+TEST_CASE("Mru InsertRange Update Only")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -157,9 +147,9 @@ TEST_CASE("Rr InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Rr InsertRange Insert Or Update")
+TEST_CASE("Mru InsertRange Insert Or Update")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -178,8 +168,8 @@ TEST_CASE("Rr InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{
-            {2, "test2"}, // make 2 Rr
             {1, "test1"},
+            {2, "test2"},
             {3, "test3"},
             {4, "test4"}, // new
             {5, "test5"}, // new
@@ -190,20 +180,22 @@ TEST_CASE("Rr InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    // Non deterministic which values are still in the cache, but should be size 4.
-
-    size_t count{0};
-    count += cache.Find(1).has_value() ? 1 : 0;
-    count += cache.Find(2).has_value() ? 1 : 0;
-    count += cache.Find(3).has_value() ? 1 : 0;
-    count += cache.Find(4).has_value() ? 1 : 0;
-    count += cache.Find(5).has_value() ? 1 : 0;
-    REQUIRE(count == 4);
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(3).has_value());
+    REQUIRE(cache.Find(3).value() == "test3");
+    // REQUIRE(cache.Find(4).has_value());
+    // REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by Mru policy
+    REQUIRE(cache.Find(5).has_value());
+    REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Rr Delete")
+TEST_CASE("Mru Delete")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -220,9 +212,9 @@ TEST_CASE("Rr Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Rr DeleteRange")
+TEST_CASE("Mru DeleteRange")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -252,9 +244,9 @@ TEST_CASE("Rr DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Rr FindRange")
+TEST_CASE("Mru FindRange")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -297,9 +289,9 @@ TEST_CASE("Rr FindRange")
     }
 }
 
-TEST_CASE("Rr FindRangeFill")
+TEST_CASE("Mru FindRangeFill")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -351,9 +343,9 @@ TEST_CASE("Rr FindRangeFill")
     }
 }
 
-TEST_CASE("Rr empty")
+TEST_CASE("Mru empty")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -362,9 +354,9 @@ TEST_CASE("Rr empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Rr size + capacity")
+TEST_CASE("Mru size + capacity")
 {
-    RrCache<uint64_t, std::string> cache{4};
+    MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -387,4 +379,24 @@ TEST_CASE("Rr size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
+}
+
+TEST_CASE("Mru Find with Peek")
+{
+    MruCache<uint64_t, std::string> cache{4};
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+    REQUIRE(cache.Insert(3, "Hola"));
+    REQUIRE(cache.Insert(4, "Mondo"));
+
+    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(2, Peek::NO).has_value());
+    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(4, Peek::NO).has_value());
+
+    REQUIRE(cache.Insert(5, "another one bites the dust1"));
+    REQUIRE_FALSE(cache.Find(4).has_value());
+    REQUIRE(cache.Insert(6, "another one bites the dust2"));
+    REQUIRE_FALSE(cache.Find(5).has_value());
 }

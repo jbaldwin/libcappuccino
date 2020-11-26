@@ -1,52 +1,89 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
+
+#include <thread>
 
 using namespace cappuccino;
+using namespace std::chrono_literals;
 
-TEST_CASE("Lru example")
+TEST_CASE("Lfuda example")
 {
-    // Create a cache with 2 items.
-    LruCache<uint64_t, std::string> lru_cache{2};
+    // Create a cache with 2 items, 10ms age time with halving dynamic aging ratio.
+    LfudaCache<uint64_t, std::string> cache{2, 10ms, 0.5f};
 
-    // Insert hello and world.
-    lru_cache.Insert(1, "Hello");
-    lru_cache.Insert(2, "World");
+    // Insert some data.
+    cache.Insert(1, "Hello");
+    cache.Insert(2, "World");
 
+    // Make 1 have a use count of 20
+    for (size_t i = 1; i < 20; ++i)
     {
-        // Grab them
-        auto hello = lru_cache.Find(1);
-        auto world = lru_cache.Find(2);
-
-        REQUIRE(hello.has_value());
-        REQUIRE(world.has_value());
-
-        REQUIRE(hello.value() == "Hello");
-        REQUIRE(world.value() == "World");
+        cache.Find(1);
+    }
+    // Make 2 have a use count of 22
+    for (size_t i = 1; i < 22; ++i)
+    {
+        cache.Find(2);
     }
 
-    // Insert hola, this will replace "Hello" since its the oldest lru item.
-    lru_cache.Insert(3, "Hola");
+    // wait an ~order of magnitude long enough to dynamically age.
+    std::this_thread::sleep_for(50ms);
+
+    // // Manually dynamic age to see its effect
+    auto aged_count = cache.DynamicallyAge();
+    REQUIRE(aged_count == 2);
+    {
+        {
+            auto foo = cache.FindWithUseCount(1);
+            REQUIRE(foo.has_value());
+            const auto& [value, use_count] = foo.value();
+            REQUIRE(value == "Hello");
+            REQUIRE(use_count == 11); // dynamic age 20 => 10 + 1 find
+        }
+        {
+            auto bar = cache.FindWithUseCount(2);
+            REQUIRE(bar.has_value());
+            const auto& [value, use_count] = bar.value();
+            REQUIRE(value == "World");
+            REQUIRE(use_count == 12); // dynamic age 22 => 11 + 1 find
+        }
+    }
+
+    // Insert 3, 1 should be replaced as it will dynamically age
+    // down to 10, while 2 will dynamically age down to 11.
+    cache.Insert(3, "Hello World");
 
     {
-        auto hola  = lru_cache.Find(3);
-        auto hello = lru_cache.Find(1); // this will return an empty optional now
-        auto world = lru_cache.Find(2); // this value should still be available!
+        auto foo    = cache.FindWithUseCount(1);
+        auto bar    = cache.FindWithUseCount(2);
+        auto foobar = cache.FindWithUseCount(3);
 
-        REQUIRE(hola.has_value());
-        REQUIRE_FALSE(hello.has_value());
-        REQUIRE(world.has_value());
+        REQUIRE_FALSE(foo.has_value());
+        REQUIRE(bar.has_value());
+        REQUIRE(foobar.has_value());
+
+        {
+            const auto& [value, use_count] = bar.value();
+            REQUIRE(value == "World");
+            REQUIRE(use_count == 13);
+        }
+        {
+            const auto& [value, use_count] = foobar.value();
+            REQUIRE(value == "Hello World");
+            REQUIRE(use_count == 2);
+        }
     }
 }
 
-TEST_CASE("Lru Find doesn't exist")
+TEST_CASE("Lfuda Find doesn't exist")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Lru Insert Only")
+TEST_CASE("Lfuda Insert Only")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -59,18 +96,18 @@ TEST_CASE("Lru Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Lru Update Only")
+TEST_CASE("Lfuda Update Only")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Lru Insert Or Update")
+TEST_CASE("Lfuda Insert Or Update")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -83,9 +120,9 @@ TEST_CASE("Lru Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Lru InsertRange Insert Only")
+TEST_CASE("Lfuda InsertRange Insert Only")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -95,11 +132,10 @@ TEST_CASE("Lru InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 3);
-
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2"); // make 2 LRU
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
@@ -119,18 +155,18 @@ TEST_CASE("Lru InsertRange Insert Only")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by lru policy
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Lru InsertRange Update Only")
+TEST_CASE("Lfuda InsertRange Update Only")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -145,9 +181,9 @@ TEST_CASE("Lru InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Lru InsertRange Insert Or Update")
+TEST_CASE("Lfuda InsertRange Insert Or Update")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -166,8 +202,8 @@ TEST_CASE("Lru InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{
-            {2, "test2"}, // make 2 LRU
             {1, "test1"},
+            {2, "test2"},
             {3, "test3"},
             {4, "test4"}, // new
             {5, "test5"}, // new
@@ -180,18 +216,18 @@ TEST_CASE("Lru InsertRange Insert Or Update")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by lru policy
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE(cache.Find(4).has_value());
-    REQUIRE(cache.Find(4).value() == "test4");
+    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Lru Delete")
+TEST_CASE("Lfuda Delete")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -208,9 +244,9 @@ TEST_CASE("Lru Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Lru DeleteRange")
+TEST_CASE("Lfuda DeleteRange")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -240,9 +276,9 @@ TEST_CASE("Lru DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Lru FindRange")
+TEST_CASE("Lfuda FindRange")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -285,9 +321,9 @@ TEST_CASE("Lru FindRange")
     }
 }
 
-TEST_CASE("Lru FindRangeFill")
+TEST_CASE("Lfuda FindRangeFill")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -339,9 +375,9 @@ TEST_CASE("Lru FindRangeFill")
     }
 }
 
-TEST_CASE("Lru empty")
+TEST_CASE("Lfuda empty")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -350,9 +386,9 @@ TEST_CASE("Lru empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Lru size + capacity")
+TEST_CASE("Lfuda size + capacity")
 {
-    LruCache<uint64_t, std::string> cache{4};
+    LfudaCache<uint64_t, std::string> cache{4, 1s, 0.5f};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -375,24 +411,4 @@ TEST_CASE("Lru size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
-}
-
-TEST_CASE("Lru Find with Peek")
-{
-    LruCache<uint64_t, std::string> cache{4};
-
-    REQUIRE(cache.Insert(1, "Hello"));
-    REQUIRE(cache.Insert(2, "World"));
-    REQUIRE(cache.Insert(3, "Hola"));
-    REQUIRE(cache.Insert(4, "Mondo"));
-
-    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(2, Peek::NO).has_value());
-    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(4, Peek::NO).has_value());
-
-    REQUIRE(cache.Insert(5, "another one bites the dust1"));
-    REQUIRE_FALSE(cache.Find(1).has_value());
-    REQUIRE(cache.Insert(6, "another one bites the dust2"));
-    REQUIRE_FALSE(cache.Find(3).has_value());
 }

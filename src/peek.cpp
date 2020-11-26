@@ -1,4 +1,4 @@
-#include "cappuccino/Peek.hpp"
+#include "cappuccino/peek.hpp"
 
 namespace cappuccino
 {

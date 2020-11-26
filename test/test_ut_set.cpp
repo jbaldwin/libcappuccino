@@ -1,5 +1,5 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>

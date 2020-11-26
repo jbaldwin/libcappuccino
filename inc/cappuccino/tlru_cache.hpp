@@ -1,8 +1,8 @@
 #pragma once
 
-#include "cappuccino/Allow.hpp"
-#include "cappuccino/Lock.hpp"
-#include "cappuccino/Peek.hpp"
+#include "cappuccino/allow.hpp"
+#include "cappuccino/lock.hpp"
+#include "cappuccino/peek.hpp"
 
 #include <chrono>
 #include <list>

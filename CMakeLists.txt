@@ -15,20 +15,20 @@ option(CAPPUCCINO_BUILD_TESTS    "Build the tests. Default=ON" ON)
 option(CAPPUCCINO_CODE_COVERAGE  "Enable code coverage, tests must also be enabled. Default=OFF" OFF)
 
 set(CAPPUCCINO_SOURCE_FILES
-    inc/cappuccino/Allow.hpp src/Allow.cpp
-    inc/cappuccino/Cappuccino.hpp
-    inc/cappuccino/FifoCache.hpp
-    inc/cappuccino/LfuCache.hpp
-    inc/cappuccino/LfudaCache.hpp
-    inc/cappuccino/Lock.hpp src/Lock.cpp
-    inc/cappuccino/LruCache.hpp
-    inc/cappuccino/MruCache.hpp
-    inc/cappuccino/Peek.hpp src/Peek.cpp
-    inc/cappuccino/RrCache.hpp
-    inc/cappuccino/UtMap.hpp
-    inc/cappuccino/UtSet.hpp
-    inc/cappuccino/TlruCache.hpp
-    inc/cappuccino/UtlruCache.hpp
+    inc/cappuccino/allow.hpp src/allow.cpp
+    inc/cappuccino/cappuccino.hpp
+    inc/cappuccino/fifo_cache.hpp
+    inc/cappuccino/lfu_cache.hpp
+    inc/cappuccino/lfuda_cache.hpp
+    inc/cappuccino/lock.hpp src/lock.cpp
+    inc/cappuccino/lru_cache.hpp
+    inc/cappuccino/mru_cache.hpp
+    inc/cappuccino/peek.hpp src/peek.cpp
+    inc/cappuccino/rr_cache.hpp
+    inc/cappuccino/tlru_cache.hpp
+    inc/cappuccino/ut_map.hpp
+    inc/cappuccino/ut_set.hpp
+    inc/cappuccino/utlru_cache.hpp
 )
 
 add_library(${PROJECT_NAME} STATIC ${CAPPUCCINO_SOURCE_FILES})

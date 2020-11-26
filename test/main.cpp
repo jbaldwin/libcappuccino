@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
 
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
 
 using namespace cappuccino;
 

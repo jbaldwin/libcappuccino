@@ -1,64 +1,64 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
 
 using namespace cappuccino;
 
-using namespace cappuccino;
-
-TEST_CASE("Lfu example")
+TEST_CASE("RR example")
 {
     // Create a cache with 2 items.
-    LfuCache<uint64_t, std::string> cache{2};
+    RrCache<uint64_t, std::string> rr_cache{2};
 
-    // Insert some data.
-    cache.Insert(1, "Hello");
-    cache.Insert(2, "World");
+    // Insert hello and world.
+    rr_cache.Insert(1, "Hello");
+    rr_cache.Insert(2, "World");
 
-    // Touch 1 twice.
-    auto foo1 = cache.Find(1);
-    auto foo2 = cache.Find(1);
-
-    (void)foo1;
-    (void)foo2;
-
-    // Touch 2 once.
-    auto bar1 = cache.Find(2);
-
-    (void)bar1;
-
-    // Insert 3, 2 should be replaced.
-    cache.Insert(3, "Hello World");
-
-    auto bar2 = cache.FindWithUseCount(2);
-    REQUIRE_FALSE(bar2.has_value());
-
-    auto foo3   = cache.FindWithUseCount(1);
-    auto foobar = cache.FindWithUseCount(3);
-
-    REQUIRE(foo3.has_value());
     {
-        auto& [value, use_count] = foo3.value();
-        REQUIRE(value == "Hello");
-        REQUIRE(use_count == 4); // insert, three finds
+        // Grab them
+        auto hello = rr_cache.Find(1);
+        auto world = rr_cache.Find(2);
+
+        REQUIRE(hello.has_value());
+        REQUIRE(world.has_value());
+
+        REQUIRE(hello.value() == "Hello");
+        REQUIRE(world.value() == "World");
     }
 
-    REQUIRE(foobar.has_value());
+    // Insert hola, this will replace "Hello" or "World", we don't know!
+    rr_cache.Insert(3, "Hola");
+
     {
-        auto& [value, use_count] = foobar.value();
-        REQUIRE(value == "Hello World");
-        REQUIRE(use_count == 2); // insert, one find
+        auto hola  = rr_cache.Find(3); // This will be in the cache.
+        auto hello = rr_cache.Find(1); // This might be in the cache?
+        auto world = rr_cache.Find(2); // This might be in the cache?
+
+        REQUIRE(hola.has_value());
+        REQUIRE(hola.value() == "Hola");
+
+        size_t count{0};
+        if (hello.has_value())
+        {
+            ++count;
+        }
+        if (world.has_value())
+        {
+            ++count;
+        }
+
+        // One of hello or world will be randomly evicted, which we don't know.
+        REQUIRE(count == 1);
     }
 }
 
-TEST_CASE("Lfu Find doesn't exist")
+TEST_CASE("Rr Find doesn't exist")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Lfu Insert Only")
+TEST_CASE("Rr Insert Only")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -71,18 +71,18 @@ TEST_CASE("Lfu Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Lfu Update Only")
+TEST_CASE("Rr Update Only")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Lfu Insert Or Update")
+TEST_CASE("Rr Insert Or Update")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -95,9 +95,9 @@ TEST_CASE("Lfu Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Lfu InsertRange Insert Only")
+TEST_CASE("Rr InsertRange Insert Only")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -107,10 +107,11 @@ TEST_CASE("Lfu InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 3);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
+
     REQUIRE(cache.Find(2).has_value());
     REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE(cache.Find(1).has_value());
+    REQUIRE(cache.Find(1).value() == "test1");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
@@ -128,20 +129,20 @@ TEST_CASE("Lfu InsertRange Insert Only")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
-    REQUIRE(cache.Find(3).has_value());
-    REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
-    REQUIRE(cache.Find(5).has_value());
-    REQUIRE(cache.Find(5).value() == "test5");
+    // Non deterministic which values are still in the cache, but should be size 4.
+
+    size_t count{0};
+    count += cache.Find(1).has_value() ? 1 : 0;
+    count += cache.Find(2).has_value() ? 1 : 0;
+    count += cache.Find(3).has_value() ? 1 : 0;
+    count += cache.Find(4).has_value() ? 1 : 0;
+    count += cache.Find(5).has_value() ? 1 : 0;
+    REQUIRE(count == 4);
 }
 
-TEST_CASE("Lfu InsertRange Update Only")
+TEST_CASE("Rr InsertRange Update Only")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -156,9 +157,9 @@ TEST_CASE("Lfu InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Lfu InsertRange Insert Or Update")
+TEST_CASE("Rr InsertRange Insert Or Update")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -177,8 +178,8 @@ TEST_CASE("Lfu InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{
+            {2, "test2"}, // make 2 Rr
             {1, "test1"},
-            {2, "test2"},
             {3, "test3"},
             {4, "test4"}, // new
             {5, "test5"}, // new
@@ -189,20 +190,20 @@ TEST_CASE("Lfu InsertRange Insert Or Update")
     }
 
     REQUIRE(cache.size() == 4);
-    REQUIRE(cache.Find(1).has_value());
-    REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
-    REQUIRE(cache.Find(3).has_value());
-    REQUIRE(cache.Find(3).value() == "test3");
-    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by lfu policy
-    REQUIRE(cache.Find(5).has_value());
-    REQUIRE(cache.Find(5).value() == "test5");
+    // Non deterministic which values are still in the cache, but should be size 4.
+
+    size_t count{0};
+    count += cache.Find(1).has_value() ? 1 : 0;
+    count += cache.Find(2).has_value() ? 1 : 0;
+    count += cache.Find(3).has_value() ? 1 : 0;
+    count += cache.Find(4).has_value() ? 1 : 0;
+    count += cache.Find(5).has_value() ? 1 : 0;
+    REQUIRE(count == 4);
 }
 
-TEST_CASE("Lfu Delete")
+TEST_CASE("Rr Delete")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -219,9 +220,9 @@ TEST_CASE("Lfu Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Lfu DeleteRange")
+TEST_CASE("Rr DeleteRange")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -251,9 +252,9 @@ TEST_CASE("Lfu DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Lfu FindRange")
+TEST_CASE("Rr FindRange")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -296,9 +297,9 @@ TEST_CASE("Lfu FindRange")
     }
 }
 
-TEST_CASE("Lfu FindRangeFill")
+TEST_CASE("Rr FindRangeFill")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -350,9 +351,9 @@ TEST_CASE("Lfu FindRangeFill")
     }
 }
 
-TEST_CASE("Lfu empty")
+TEST_CASE("Rr empty")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -361,9 +362,9 @@ TEST_CASE("Lfu empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Lfu size + capacity")
+TEST_CASE("Rr size + capacity")
 {
-    LfuCache<uint64_t, std::string> cache{4};
+    RrCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -386,19 +387,4 @@ TEST_CASE("Lfu size + capacity")
     REQUIRE(cache.size() == 4);
 
     REQUIRE(cache.capacity() == 4);
-}
-
-TEST_CASE("Lfu smallest use count")
-{
-    LfuCache<uint64_t, std::string> cache{1};
-
-    // Insert counts as a use.
-    cache.Insert(1, "test1");
-
-    // Find counts as a use.
-    auto element = cache.FindWithUseCount(1);
-    REQUIRE(element.has_value());
-    const auto& [value, use_count] = element.value();
-    REQUIRE(value == "test1");
-    REQUIRE(use_count == 2);
 }

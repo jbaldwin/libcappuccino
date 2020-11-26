@@ -1,13 +1,10 @@
-#include "cappuccino/Cappuccino.hpp"
+#include <cappuccino/cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     using namespace std::chrono_literals;
 
     // Create a cache with 2 items and a uniform TTL of 1 hour.

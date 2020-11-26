@@ -1,21 +1,27 @@
 #include "catch.hpp"
-#include <cappuccino/Cappuccino.hpp>
+#include <cappuccino/cappuccino.hpp>
+
+#include <chrono>
+#include <iostream>
+#include <thread>
+#include <variant>
 
 using namespace cappuccino;
+using namespace std::chrono_literals;
 
-TEST_CASE("Mru example")
+TEST_CASE("UtUtlru example")
 {
-    // Create a cache with 2 items.
-    MruCache<uint64_t, std::string> mru_cache{2};
+    // Create a cache with 2 items and a uniform TTL of 20ms.
+    UtlruCache<uint64_t, std::string> cache{20ms, 2};
 
-    // Insert hello and world.
-    mru_cache.Insert(1, "Hello");
-    mru_cache.Insert(2, "World");
+    // Insert "hello" and "world".
+    cache.Insert(1, "Hello");
+    cache.Insert(2, "World");
 
     {
-        // Grab them
-        auto hello = mru_cache.Find(1);
-        auto world = mru_cache.Find(2);
+        // Fetch the items from the catch, this will update their Utlru positions.
+        auto hello = cache.Find(1);
+        auto world = cache.Find(2);
 
         REQUIRE(hello.has_value());
         REQUIRE(world.has_value());
@@ -24,29 +30,38 @@ TEST_CASE("Mru example")
         REQUIRE(world.value() == "World");
     }
 
-    // Insert hola, this will replace "World" since its the most recently used item.
-    mru_cache.Insert(3, "Hola");
+    // Insert "Hola", this will replace "Hello" since its the oldest Utlru item
+    // and nothing has expired yet.
+    cache.Insert(3, "Hola");
 
     {
-        auto hola  = mru_cache.Find(3);
-        auto hello = mru_cache.Find(1); // this will exist
-        auto world = mru_cache.Find(2); // this value will no longer be available.
+        auto hola  = cache.Find(3);
+        auto hello = cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
+        auto world = cache.Find(2);
 
         REQUIRE(hola.has_value());
-        REQUIRE(hello.has_value());
-        REQUIRE_FALSE(world.has_value());
+        REQUIRE_FALSE(hello.has_value());
+        REQUIRE(world.has_value());
     }
+
+    // Sleep for an ~order of magnitude longer than the TTL.
+    std::this_thread::sleep_for(100ms);
+
+    // Manually trigger a clean since no insert/delete is wanted.
+    auto cleaned_count = cache.CleanExpiredValues();
+    REQUIRE(cleaned_count == 2);
+    REQUIRE(cache.empty());
 }
 
-TEST_CASE("Mru Find doesn't exist")
+TEST_CASE("Utlru Find doesn't exist")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
     REQUIRE_FALSE(cache.Find(100).has_value());
 }
 
-TEST_CASE("Mru Insert Only")
+TEST_CASE("Utlru Insert Only")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -59,18 +74,18 @@ TEST_CASE("Mru Insert Only")
     REQUIRE(value.value() == "test");
 }
 
-TEST_CASE("Mru Update Only")
+TEST_CASE("Utlru Update Only")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
 
-TEST_CASE("Mru Insert Or Update")
+TEST_CASE("Utlru Insert Or Update")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.Insert(1, "test"));
     auto value = cache.Find(1);
@@ -83,9 +98,9 @@ TEST_CASE("Mru Insert Or Update")
     REQUIRE(value.value() == "test2");
 }
 
-TEST_CASE("Mru InsertRange Insert Only")
+TEST_CASE("Utlru InsertRange Insert Only")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -96,10 +111,10 @@ TEST_CASE("Mru InsertRange Insert Only")
 
     REQUIRE(cache.size() == 3);
 
+    REQUIRE(cache.Find(2).has_value());
+    REQUIRE(cache.Find(2).value() == "test2"); // make 2 Utlru
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
 
@@ -119,20 +134,18 @@ TEST_CASE("Mru InsertRange Insert Only")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    // REQUIRE(cache.Find(4).has_value());
-    // REQUIRE(cache.Find(4).value() == "test4");
-    REQUIRE_FALSE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(4).value() == "test4");
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Mru InsertRange Update Only")
+TEST_CASE("Utlru InsertRange Update Only")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -147,9 +160,9 @@ TEST_CASE("Mru InsertRange Update Only")
     REQUIRE_FALSE(cache.Find(3).has_value());
 }
 
-TEST_CASE("Mru InsertRange Insert Or Update")
+TEST_CASE("Utlru InsertRange Insert Or Update")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -168,8 +181,8 @@ TEST_CASE("Mru InsertRange Insert Or Update")
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{
+            {2, "test2"}, // make 2 Utlru
             {1, "test1"},
-            {2, "test2"},
             {3, "test3"},
             {4, "test4"}, // new
             {5, "test5"}, // new
@@ -182,20 +195,18 @@ TEST_CASE("Mru InsertRange Insert Or Update")
     REQUIRE(cache.size() == 4);
     REQUIRE(cache.Find(1).has_value());
     REQUIRE(cache.Find(1).value() == "test1");
-    REQUIRE(cache.Find(2).has_value());
-    REQUIRE(cache.Find(2).value() == "test2");
+    REQUIRE_FALSE(cache.Find(2).has_value()); // evicted by Utlru policy
     REQUIRE(cache.Find(3).has_value());
     REQUIRE(cache.Find(3).value() == "test3");
-    // REQUIRE(cache.Find(4).has_value());
-    // REQUIRE(cache.Find(4).value() == "test4");
-    REQUIRE_FALSE(cache.Find(4).has_value()); // evicted by Mru policy
+    REQUIRE(cache.Find(4).has_value());
+    REQUIRE(cache.Find(4).value() == "test4");
     REQUIRE(cache.Find(5).has_value());
     REQUIRE(cache.Find(5).value() == "test5");
 }
 
-TEST_CASE("Mru Delete")
+TEST_CASE("Utlru Delete")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
     auto value = cache.Find(1);
@@ -212,9 +223,9 @@ TEST_CASE("Mru Delete")
     REQUIRE_FALSE(cache.Delete(200));
 }
 
-TEST_CASE("Mru DeleteRange")
+TEST_CASE("Utlru DeleteRange")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -244,9 +255,9 @@ TEST_CASE("Mru DeleteRange")
     REQUIRE_FALSE(cache.Find(5).has_value());
 }
 
-TEST_CASE("Mru FindRange")
+TEST_CASE("Utlru FindRange")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -289,9 +300,9 @@ TEST_CASE("Mru FindRange")
     }
 }
 
-TEST_CASE("Mru FindRangeFill")
+TEST_CASE("Utlru FindRangeFill")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
@@ -343,9 +354,9 @@ TEST_CASE("Mru FindRangeFill")
     }
 }
 
-TEST_CASE("Mru empty")
+TEST_CASE("Utlru empty")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.empty());
     REQUIRE(cache.Insert(1, "test", Allow::INSERT));
@@ -354,9 +365,9 @@ TEST_CASE("Mru empty")
     REQUIRE(cache.empty());
 }
 
-TEST_CASE("Mru size + capacity")
+TEST_CASE("Utlru size + capacity")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.capacity() == 4);
 
@@ -381,22 +392,107 @@ TEST_CASE("Mru size + capacity")
     REQUIRE(cache.capacity() == 4);
 }
 
-TEST_CASE("Mru Find with Peek")
+TEST_CASE("Utlru Find with Peek")
 {
-    MruCache<uint64_t, std::string> cache{4};
+    UtlruCache<uint64_t, std::string> cache{50ms, 4};
 
     REQUIRE(cache.Insert(1, "Hello"));
     REQUIRE(cache.Insert(2, "World"));
     REQUIRE(cache.Insert(3, "Hola"));
     REQUIRE(cache.Insert(4, "Mondo"));
 
-    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to MRU
     REQUIRE(cache.Find(2, Peek::NO).has_value());
-    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to MRU
     REQUIRE(cache.Find(4, Peek::NO).has_value());
 
     REQUIRE(cache.Insert(5, "another one bites the dust1"));
-    REQUIRE_FALSE(cache.Find(4).has_value());
+    REQUIRE_FALSE(cache.Find(1).has_value());
     REQUIRE(cache.Insert(6, "another one bites the dust2"));
-    REQUIRE_FALSE(cache.Find(5).has_value());
+    REQUIRE_FALSE(cache.Find(3).has_value());
+}
+
+TEST_CASE("Utlru ttls")
+{
+    UtlruCache<uint64_t, std::string> cache{20ms, 2};
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+
+    std::this_thread::sleep_for(50ms);
+
+    REQUIRE(cache.Insert(3, "Hola"));
+
+    auto hello = cache.Find(1);
+    auto world = cache.Find(2);
+    auto hola  = cache.Find(3);
+
+    REQUIRE_FALSE(hello.has_value());
+    REQUIRE_FALSE(world.has_value());
+    REQUIRE(hola.has_value());
+    REQUIRE(hola.value() == "Hola");
+}
+
+TEST_CASE("Utlru Clean with only some expired")
+{
+    UtlruCache<uint64_t, std::string> cache{25ms, 2};
+
+    REQUIRE(cache.Insert(1, "Hello"));
+    REQUIRE(cache.Insert(2, "World"));
+
+    std::this_thread::sleep_for(50ms);
+
+    REQUIRE(cache.Insert(3, "Hola"));
+
+    cache.CleanExpiredValues();
+
+    auto hello = cache.Find(1);
+    auto world = cache.Find(2);
+    auto hola  = cache.Find(3);
+
+    REQUIRE_FALSE(hello.has_value());
+    REQUIRE_FALSE(world.has_value());
+    REQUIRE(hola.has_value());
+    REQUIRE(hola.value() == "Hola");
+}
+
+TEST_CASE("UtlruCache Insert only long running test.")
+{
+    // This test is to make sure that an item that is continuously inserted into the cache
+    // with Allow::INSERT only and its the only item inserted that it will eventually
+    // be evicted by its TTL.
+
+    UtlruCache<std::string, std::monostate> cache{1s, 128};
+
+    uint64_t inserted{0};
+    uint64_t blocked{0};
+
+    auto start = std::chrono::steady_clock::now();
+
+    while (inserted < 5)
+    {
+        if (cache.Insert("test-key", std::monostate{}, Allow::INSERT))
+        {
+            ++inserted;
+            std::cout << "inserted=" << inserted << "\n";
+            std::cout << "blocked=" << blocked << "\n";
+        }
+        else
+        {
+            ++blocked;
+        }
+        std::this_thread::sleep_for(1ms);
+    }
+
+    auto stop = std::chrono::steady_clock::now();
+
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+
+    std::cout << "total_inserted=" << inserted << "\n";
+    std::cout << "total_blocked=" << blocked << "\n";
+    std::cout << "total_elapsed=" << elapsed.count() << "\n\n";
+
+    REQUIRE(inserted == 5);
+    REQUIRE(blocked > inserted);
+    REQUIRE(elapsed >= std::chrono::milliseconds{4000});
 }

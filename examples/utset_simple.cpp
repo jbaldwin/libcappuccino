@@ -1,14 +1,11 @@
-#include "cappuccino/Cappuccino.hpp"
+#include <cappuccino/cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>
 #include <thread>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     using namespace std::chrono_literals;
 
     // Create a set a uniform TTL of 10 millisecond.

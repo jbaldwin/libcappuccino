@@ -44,7 +44,7 @@ to the likes of how Redis/Memcached work but in memory of the application rather
 process.
 
 ```C++
-    #include "cappuccino/Cappuccino.hpp"
+    #include <cappuccino/cappuccino.hpp>
     
     #include <chrono>
     #include <iostream>
@@ -116,7 +116,7 @@ caller can also specify this parameter as just `INSERT` to only allow the item t
 already exist or as `UPDATE` to only change the item in the cahce if it already exists.
 
 ```C++
-    #include <cappuccino/Cappuccino.hpp>
+    #include <cappuccino/cappuccino.hpp>
     
     int main()
     {

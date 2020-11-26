@@ -1,7 +1,7 @@
 #pragma once
 
-#include "cappuccino/Allow.hpp"
-#include "cappuccino/Lock.hpp"
+#include "cappuccino/allow.hpp"
+#include "cappuccino/lock.hpp"
 
 #include <atomic>
 #include <chrono>
