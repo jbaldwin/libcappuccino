@@ -1,26 +1,23 @@
-#include "cappuccino/Cappuccino.hpp"
+#include <cappuccino/cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>
 #include <thread>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     using namespace std::chrono_literals;
 
     // Create a set a uniform TTL of 10 millisecond.
-    cappuccino::UtSet<std::string> ut_set{10ms};
+    cappuccino::ut_set<std::string> set{10ms};
 
     // Insert "hello" and "world".
-    ut_set.Insert("Hello");
-    ut_set.Insert("World");
+    set.insert("Hello");
+    set.insert("World");
 
     // Fetch the items from the nap.
-    auto hello = ut_set.Find("Hello");
-    auto world = ut_set.Find("World");
+    auto hello = set.find("Hello");
+    auto world = set.find("World");
 
     if (hello && world)
     {
@@ -32,10 +29,10 @@ int main(int argc, char* argv[])
     }
 
     // Insert "Hola". This will keep expanding the set.
-    ut_set.Insert("Hola");
+    set.insert("Hola");
 
-    auto hola = ut_set.Find("Hola");
-    hello     = ut_set.Find("Hello"); // Hello is still in the set.
+    auto hola = set.find("Hola");
+    hello     = set.find("Hello"); // Hello is still in the set.
 
     // All values should be present in the set.
     if (hello && world && hola)
@@ -51,9 +48,9 @@ int main(int argc, char* argv[])
     std::this_thread::sleep_for(100ms);
 
     // No values should be present in the set now.
-    hello = ut_set.Find("Hello");
-    world = ut_set.Find("World");
-    hola  = ut_set.Find("Hola");
+    hello = set.find("Hello");
+    world = set.find("World");
+    hola  = set.find("Hola");
 
     if (!hello && !world && !hola)
     {

@@ -1,34 +1,31 @@
-#include "cappuccino/Cappuccino.hpp"
+#include <cappuccino/cappuccino.hpp>
 
 #include <chrono>
 #include <iostream>
 
-int main(int argc, char* argv[])
+int main()
 {
-    (void)argc;
-    (void)argv;
-
     using namespace std::chrono_literals;
 
     // Create a cache with 2 items and a uniform TTL of 1 hour.
-    cappuccino::UtlruCache<uint64_t, std::string> lru_cache{1h, 2};
+    cappuccino::utlru_cache<uint64_t, std::string> cache{1h, 2};
 
     // Insert "hello" and "world".
-    lru_cache.Insert(1, "Hello");
-    lru_cache.Insert(2, "World");
+    cache.insert(1, "Hello");
+    cache.insert(2, "World");
 
     // Fetch the items from the catch, this will update their LRU positions.
-    auto hello = lru_cache.Find(1);
-    auto world = lru_cache.Find(2);
+    auto hello = cache.find(1);
+    auto world = cache.find(2);
 
     std::cout << hello.value() << ", " << world.value() << "!" << std::endl;
 
     // Insert "hHla", this will replace "Hello" since its the oldest lru item
     // and nothing has expired yet.
-    lru_cache.Insert(3, "Hola");
+    cache.insert(3, "Hola");
 
-    auto hola = lru_cache.Find(3);
-    hello     = lru_cache.Find(1); // Hello isn't in the cache anymore and will return an empty optional.
+    auto hola = cache.find(3);
+    hello     = cache.find(1); // Hello isn't in the cache anymore and will return an empty optional.
 
     std::cout << hola.value() << ", " << world.value() << "!" << std::endl;
 
