@@ -53,10 +53,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### utmap_simple ###
 project(cap_utmap_simple CXX)
-add_executable(${PROJECT_NAME} utmap_simple.cpp)
+add_executable(${PROJECT_NAME} ut_map_simple.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 
 ### utset_simple ###
 project(cap_utset_simple CXX)
-add_executable(${PROJECT_NAME} utset_simple.cpp)
+add_executable(${PROJECT_NAME} ut_set_simple.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
