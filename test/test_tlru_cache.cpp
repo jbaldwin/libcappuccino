@@ -407,7 +407,7 @@ TEST_CASE("Tlru size + capacity")
     REQUIRE(cache.capacity() == 4);
 }
 
-TEST_CASE("Tlru Find with Peek")
+TEST_CASE("Tlru Find with peek")
 {
     TlruCache<uint64_t, std::string> cache{4};
 
@@ -416,10 +416,10 @@ TEST_CASE("Tlru Find with Peek")
     REQUIRE(cache.Insert(1min, 3, "Hola"));
     REQUIRE(cache.Insert(1min, 4, "Mondo"));
 
-    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(2, Peek::NO).has_value());
-    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to MRU
-    REQUIRE(cache.Find(4, Peek::NO).has_value());
+    REQUIRE(cache.Find(1, peek::yes).has_value()); // doesn't move up to MRU
+    REQUIRE(cache.Find(2, peek::no).has_value());
+    REQUIRE(cache.Find(3, peek::yes).has_value()); // doesn't move up to MRU
+    REQUIRE(cache.Find(4, peek::no).has_value());
 
     REQUIRE(cache.Insert(1min, 5, "another one bites the dust1"));
     REQUIRE_FALSE(cache.Find(1).has_value());

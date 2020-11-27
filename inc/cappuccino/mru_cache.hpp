@@ -92,7 +92,7 @@ public:
      * @param peek  Should the find act like all the item was not used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
-    auto Find(const KeyType& key, Peek peek = Peek::NO) -> std::optional<ValueType>;
+    auto Find(const KeyType& key, peek peek = peek::no) -> std::optional<ValueType>;
 
     /**
      * Attempts to find all the given keys values.
@@ -102,7 +102,7 @@ public:
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
     template<template<class...> typename RangeType>
-    auto FindRange(const RangeType<KeyType>& key_range, Peek peek = Peek::NO)
+    auto FindRange(const RangeType<KeyType>& key_range, peek peek = peek::no)
         -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
@@ -118,7 +118,7 @@ public:
      * @param peek Should the find act like all the items were not used?
      */
     template<typename RangeType>
-    auto FindRangeFill(RangeType& key_optional_value_range, Peek peek = Peek::NO) -> void;
+    auto FindRangeFill(RangeType& key_optional_value_range, peek peek = peek::no) -> void;
 
     /**
      * @return If this cache is currenty empty.
@@ -154,7 +154,7 @@ private:
 
     auto doDelete(size_t element_idx) -> void;
 
-    auto doFind(const KeyType& key, Peek peek) -> std::optional<ValueType>;
+    auto doFind(const KeyType& key, peek peek) -> std::optional<ValueType>;
 
     auto doAccess(Element& element) -> void;
 
@@ -256,7 +256,7 @@ auto MruCache<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyTyp
 };
 
 template<typename KeyType, typename ValueType, sync sync_type>
-auto MruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, Peek peek) -> std::optional<ValueType>
+auto MruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, peek peek) -> std::optional<ValueType>
 {
     std::lock_guard guard{m_lock};
     return doFind(key, peek);
@@ -264,7 +264,7 @@ auto MruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, Peek peek
 
 template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto MruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range, Peek peek)
+auto MruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range, peek peek)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -283,7 +283,7 @@ auto MruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>
 
 template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto MruCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range, Peek peek) -> void
+auto MruCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range, peek peek) -> void
 {
     std::lock_guard guard{m_lock};
     for (auto& [key, optional_value] : key_optional_value_range)
@@ -368,7 +368,7 @@ auto MruCache<KeyType, ValueType, sync_type>::doDelete(size_t element_idx) -> vo
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-auto MruCache<KeyType, ValueType, sync_type>::doFind(const KeyType& key, Peek peek) -> std::optional<ValueType>
+auto MruCache<KeyType, ValueType, sync_type>::doFind(const KeyType& key, peek peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
@@ -376,7 +376,7 @@ auto MruCache<KeyType, ValueType, sync_type>::doFind(const KeyType& key, Peek pe
         size_t   element_idx = keyed_position->second;
         Element& element     = m_elements[element_idx];
         // Do not update the mru access if peeking.
-        if (peek == Peek::NO)
+        if (peek == peek::no)
         {
             doAccess(element);
         }

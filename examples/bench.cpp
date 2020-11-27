@@ -415,8 +415,8 @@ template<
     BatchInsertEnum BatchType>
 static auto lru_cache_bench_test() -> void
 {
-    std::mutex                              cout_lock{};
-    LruCache<KeyType, ValueType, sync_type> lru_cache{CACHE_SIZE};
+    std::mutex                               cout_lock{};
+    lru_cache<KeyType, ValueType, sync_type> cache{CACHE_SIZE};
 
     std::cout << "LRU ";
     if constexpr (sync_type == sync::yes)
@@ -467,21 +467,21 @@ static auto lru_cache_bench_test() -> void
                 if constexpr (std::is_same<KeyType, std::string>::value && std::is_same<ValueType, std::string>::value)
                 {
                     auto s = to_string(i);
-                    lru_cache.Insert(s, s);
+                    cache.insert(s, s);
                 }
                 else if constexpr (
                     std::is_same<KeyType, std::string>::value && std::is_same<ValueType, uint64_t>::value)
                 {
-                    lru_cache.Insert(to_string(i), i);
+                    cache.insert(to_string(i), i);
                 }
                 else if constexpr (std::is_same<KeyType, uint64_t>::value && std::is_same<ValueType, uint64_t>::value)
                 {
-                    lru_cache.Insert(i, i);
+                    cache.insert(i, i);
                 }
                 else if constexpr (
                     std::is_same<KeyType, uint64_t>::value && std::is_same<ValueType, std::string>::value)
                 {
-                    lru_cache.Insert(i, to_string(i));
+                    cache.insert(i, to_string(i));
                 }
                 else
                 {
@@ -491,7 +491,7 @@ static auto lru_cache_bench_test() -> void
         }
         else
         {
-            std::vector<typename LruCache<KeyType, ValueType, sync_type>::KeyValue> data;
+            std::vector<std::pair<KeyType, ValueType>> data;
             data.reserve(worker_iterations);
 
             for (size_t i = 0; i < worker_iterations; ++i)
@@ -521,7 +521,7 @@ static auto lru_cache_bench_test() -> void
                 }
             }
 
-            lru_cache.InsertRange(std::move(data));
+            cache.insert_range(std::move(data));
         }
 
         auto stop = std::chrono::steady_clock::now();
@@ -536,11 +536,11 @@ static auto lru_cache_bench_test() -> void
             {
                 if constexpr (std::is_same<KeyType, std::string>::value)
                 {
-                    lru_cache.Find(to_string(i));
+                    cache.find(to_string(i));
                 }
                 else if constexpr (std::is_same<KeyType, uint64_t>::value)
                 {
-                    lru_cache.Find(i);
+                    cache.find(i);
                 }
                 else
                 {
@@ -569,7 +569,7 @@ static auto lru_cache_bench_test() -> void
                 }
             }
 
-            lru_cache.FindRangeFill(data);
+            cache.find_range_fill(data);
         }
 
         stop = std::chrono::steady_clock::now();

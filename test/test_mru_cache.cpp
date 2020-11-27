@@ -381,7 +381,7 @@ TEST_CASE("Mru size + capacity")
     REQUIRE(cache.capacity() == 4);
 }
 
-TEST_CASE("Mru Find with Peek")
+TEST_CASE("Mru Find with peek")
 {
     MruCache<uint64_t, std::string> cache{4};
 
@@ -390,10 +390,10 @@ TEST_CASE("Mru Find with Peek")
     REQUIRE(cache.Insert(3, "Hola"));
     REQUIRE(cache.Insert(4, "Mondo"));
 
-    REQUIRE(cache.Find(1, Peek::YES).has_value()); // doesn't move up to LRU
-    REQUIRE(cache.Find(2, Peek::NO).has_value());
-    REQUIRE(cache.Find(3, Peek::YES).has_value()); // doesn't move up to LRU
-    REQUIRE(cache.Find(4, Peek::NO).has_value());
+    REQUIRE(cache.Find(1, peek::yes).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(2, peek::no).has_value());
+    REQUIRE(cache.Find(3, peek::yes).has_value()); // doesn't move up to LRU
+    REQUIRE(cache.Find(4, peek::no).has_value());
 
     REQUIRE(cache.Insert(5, "another one bites the dust1"));
     REQUIRE_FALSE(cache.Find(4).has_value());

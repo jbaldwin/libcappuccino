@@ -2,22 +2,20 @@
 
 namespace cappuccino
 {
-using namespace std::string_literals;
+static const std::string peek_invalid_value{"invalid_value"};
+static const std::string peek_yes{"yes"};
+static const std::string peek_no{"no"};
 
-static const std::string PEEK_INVALID_VALUE = "INVALID_VALUE"s;
-static const std::string PEEK_YES           = "YES"s;
-static const std::string PEEK_NO            = "NO"s;
-
-auto to_string(Peek peek) -> const std::string&
+auto to_string(peek p) -> const std::string&
 {
-    switch (peek)
+    switch (p)
     {
-        case Peek::YES:
-            return PEEK_YES;
-        case Peek::NO:
-            return PEEK_NO;
+        case peek::yes:
+            return peek_yes;
+        case peek::no:
+            return peek_no;
         default:
-            return PEEK_INVALID_VALUE;
+            return peek_invalid_value;
     }
 }
 

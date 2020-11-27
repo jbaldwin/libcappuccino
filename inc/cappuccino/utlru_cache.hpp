@@ -97,7 +97,7 @@ public:
      * @param peek Should the find act like all the item was not used?
      * @return An optional with the key's value if it exists, or an empty optional if it does not.
      */
-    auto Find(const KeyType& key, Peek peek = Peek::NO) -> std::optional<ValueType>;
+    auto Find(const KeyType& key, peek peek = peek::no) -> std::optional<ValueType>;
 
     /**
      * Attempts to find all the given keys values.
@@ -107,7 +107,7 @@ public:
      * @return All input keys to either a std::nullopt if it doesn't exist, or the value if it does.
      */
     template<template<class...> typename RangeType>
-    auto FindRange(const RangeType<KeyType>& key_range, Peek peek = Peek::NO)
+    auto FindRange(const RangeType<KeyType>& key_range, peek peek = peek::no)
         -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
@@ -123,7 +123,7 @@ public:
      * @param peek Should the find act like all the items were not used?
      */
     template<typename RangeType>
-    auto FindRangeFill(RangeType& key_optional_value_range, Peek peek = Peek::NO) -> void;
+    auto FindRangeFill(RangeType& key_optional_value_range, peek peek = peek::no) -> void;
 
     /**
      * Updates the uniform TTL for all new items or updated items in the cache.
@@ -188,7 +188,7 @@ private:
 
     auto doDelete(size_t element_idx) -> void;
 
-    auto doFind(const KeyType& key, std::chrono::steady_clock::time_point now, Peek peek) -> std::optional<ValueType>;
+    auto doFind(const KeyType& key, std::chrono::steady_clock::time_point now, peek peek) -> std::optional<ValueType>;
 
     auto doAccess(Element& element) -> void;
 
@@ -303,7 +303,7 @@ auto UtlruCache<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyT
 };
 
 template<typename KeyType, typename ValueType, sync sync_type>
-auto UtlruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, Peek peek) -> std::optional<ValueType>
+auto UtlruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, peek peek) -> std::optional<ValueType>
 {
     auto now = std::chrono::steady_clock::now();
 
@@ -313,7 +313,7 @@ auto UtlruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, Peek pe
 
 template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto UtlruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range, Peek peek)
+auto UtlruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range, peek peek)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -334,7 +334,7 @@ auto UtlruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyTyp
 
 template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto UtlruCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range, Peek peek) -> void
+auto UtlruCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range, peek peek) -> void
 {
     auto now = std::chrono::steady_clock::now();
 
@@ -487,7 +487,7 @@ auto UtlruCache<KeyType, ValueType, sync_type>::doDelete(size_t element_idx) -> 
 
 template<typename KeyType, typename ValueType, sync sync_type>
 auto UtlruCache<KeyType, ValueType, sync_type>::doFind(
-    const KeyType& key, std::chrono::steady_clock::time_point now, Peek peek) -> std::optional<ValueType>
+    const KeyType& key, std::chrono::steady_clock::time_point now, peek peek) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
@@ -499,7 +499,7 @@ auto UtlruCache<KeyType, ValueType, sync_type>::doFind(
         if (now < element.m_expire_time)
         {
             // Do not update items access if peeking.
-            if (peek == Peek::NO)
+            if (peek == peek::no)
             {
                 doAccess(element);
             }

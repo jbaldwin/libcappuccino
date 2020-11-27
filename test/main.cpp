@@ -20,9 +20,9 @@ TEST_CASE("syncImpl to_string()")
     REQUIRE(to_string(static_cast<cappuccino::sync>(5000)) == "invalid_value");
 }
 
-TEST_CASE("Peek to_string()")
+TEST_CASE("peek to_string()")
 {
-    REQUIRE(to_string(Peek::YES) == "YES");
-    REQUIRE(to_string(Peek::NO) == "NO");
-    REQUIRE(to_string(static_cast<Peek>(5000)) == "INVALID_VALUE");
+    REQUIRE(to_string(peek::yes) == "yes");
+    REQUIRE(to_string(peek::no) == "no");
+    REQUIRE(to_string(static_cast<peek>(5000)) == "invalid_value");
 }
