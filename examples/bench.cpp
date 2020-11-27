@@ -38,8 +38,8 @@ template<
     BatchInsertEnum BatchType>
 static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
 {
-    std::mutex                               cout_lock{};
-    TlruCache<KeyType, ValueType, sync_type> lru_cache{CACHE_SIZE};
+    std::mutex                                cout_lock{};
+    tlru_cache<KeyType, ValueType, sync_type> cache{CACHE_SIZE};
 
     std::cout << "TLRU ";
     if constexpr (sync_type == sync::yes)
@@ -91,21 +91,21 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 if constexpr (std::is_same<KeyType, std::string>::value && std::is_same<ValueType, std::string>::value)
                 {
                     auto s = to_string(i);
-                    lru_cache.Insert(ttl, s, s);
+                    cache.insert(ttl, s, s);
                 }
                 else if constexpr (
                     std::is_same<KeyType, std::string>::value && std::is_same<ValueType, uint64_t>::value)
                 {
-                    lru_cache.Insert(ttl, to_string(i), i);
+                    cache.insert(ttl, to_string(i), i);
                 }
                 else if constexpr (std::is_same<KeyType, uint64_t>::value && std::is_same<ValueType, uint64_t>::value)
                 {
-                    lru_cache.Insert(ttl, i, i);
+                    cache.insert(ttl, i, i);
                 }
                 else if constexpr (
                     std::is_same<KeyType, uint64_t>::value && std::is_same<ValueType, std::string>::value)
                 {
-                    lru_cache.Insert(ttl, i, to_string(i));
+                    cache.insert(ttl, i, to_string(i));
                 }
                 else
                 {
@@ -115,7 +115,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
         }
         else
         {
-            std::vector<typename TlruCache<KeyType, ValueType, sync_type>::KeyValue> data;
+            std::vector<std::tuple<std::chrono::milliseconds, KeyType, ValueType>> data;
             data.reserve(worker_iterations);
 
             for (size_t i = 0; i < worker_iterations; ++i)
@@ -145,7 +145,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 }
             }
 
-            lru_cache.InsertRange(std::move(data));
+            cache.insert_range(std::move(data));
         }
 
         auto stop = std::chrono::steady_clock::now();
@@ -160,11 +160,11 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
             {
                 if constexpr (std::is_same<KeyType, std::string>::value)
                 {
-                    lru_cache.Find(to_string(i));
+                    cache.find(to_string(i));
                 }
                 else if constexpr (std::is_same<KeyType, uint64_t>::value)
                 {
-                    lru_cache.Find(i);
+                    cache.find(i);
                 }
                 else
                 {
@@ -193,7 +193,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
                 }
             }
 
-            lru_cache.FindRangeFill(data);
+            cache.find_range_fill(data);
         }
 
         stop = std::chrono::steady_clock::now();
