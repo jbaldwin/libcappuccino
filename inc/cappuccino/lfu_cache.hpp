@@ -65,14 +65,14 @@ public:
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
      * that has 2 values in the {key_type, value_type} ordering.
-     * @tparam RangeType A container with two items, key_type, value_type.
+     * @tparam range_type A container with two items, key_type, value_type.
      * @param key_value_range The elements to insert or update into the cache.
      * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template<typename RangeType>
-    auto insert_range(RangeType&& key_value_range, allow a = allow::insert_or_update) -> size_t
+    template<typename range_type>
+    auto insert_range(range_type&& key_value_range, allow a = allow::insert_or_update) -> size_t
     {
         size_t inserted{0};
 
@@ -112,12 +112,12 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g. vector<key_type>, set<key_type>.
+     * @tparam range_type A container with the set of keys to delete, e.g. vector<key_type>, set<key_type>.
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename RangeType>
-    auto erase_range(const RangeType<key_type>& key_range) -> size_t
+    template<template<class...> typename range_type>
+    auto erase_range(const range_type<key_type>& key_range) -> size_t
     {
         size_t deleted_elements{0};
 
@@ -161,13 +161,13 @@ public:
 
     /**
      * Attempts to find all the given keys values.
-     * @tparam RangeType A container with the set of keys to find their values, e.g. vector<key_type>.
+     * @tparam range_type A container with the set of keys to find their values, e.g. vector<key_type>.
      * @param key_range The keys to lookup their pairs.
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template<template<class...> typename RangeType>
-    auto find_range(const RangeType<key_type>& key_range, bool peek = false)
+    template<template<class...> typename range_type>
+    auto find_range(const range_type<key_type>& key_range, bool peek = false)
         -> std::vector<std::pair<key_type, std::optional<value_type>>>
     {
         std::vector<std::pair<key_type, std::optional<value_type>>> output;
@@ -191,14 +191,14 @@ public:
      * empty optionals.  The keys that are found will have the optionals filled in with the
      * appropriate values from the cache.
      *
-     * @tparam RangeType A container with a pair of optional items,
+     * @tparam range_type A container with a pair of optional items,
      *                   e.g. vector<pair<key_type, optional<value_type>>>
      *                   or map<key_type, optional<value_type>>
      * @param key_optional_value_range The keys to optional values to fill out.
      * @param peek Should the find act like all the items were not used?
      */
-    template<typename RangeType>
-    auto find_range_fill(RangeType& key_optional_value_range, bool peek = false) -> void
+    template<typename range_type>
+    auto find_range_fill(range_type& key_optional_value_range, bool peek = false) -> void
     {
         std::lock_guard guard{m_lock};
         for (auto& [key, optional_value] : key_optional_value_range)
