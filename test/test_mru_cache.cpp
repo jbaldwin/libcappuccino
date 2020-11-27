@@ -48,12 +48,12 @@ TEST_CASE("Mru Insert Only")
 {
     MruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE(cache.Insert(1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1, "test", allow::insert));
     auto value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
 
-    REQUIRE_FALSE(cache.Insert(1, "test2", Allow::INSERT));
+    REQUIRE_FALSE(cache.Insert(1, "test2", allow::insert));
     value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
@@ -63,7 +63,7 @@ TEST_CASE("Mru Update Only")
 {
     MruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE_FALSE(cache.Insert(1, "test", Allow::UPDATE));
+    REQUIRE_FALSE(cache.Insert(1, "test", allow::update));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
@@ -90,7 +90,7 @@ TEST_CASE("Mru InsertRange Insert Only")
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 3);
     }
 
@@ -112,7 +112,7 @@ TEST_CASE("Mru InsertRange Insert Only")
             {5, "test5"}, // new
         };
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 2);
     }
 
@@ -137,7 +137,7 @@ TEST_CASE("Mru InsertRange Update Only")
     {
         std::vector<std::pair<uint64_t, std::string>> inserts{{1, "test1"}, {2, "test2"}, {3, "test3"}};
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::update);
         REQUIRE(inserted == 0);
     }
 
@@ -197,7 +197,7 @@ TEST_CASE("Mru Delete")
 {
     MruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE(cache.Insert(1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1, "test", allow::insert));
     auto value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
@@ -348,7 +348,7 @@ TEST_CASE("Mru empty")
     MruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
-    REQUIRE(cache.Insert(1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1, "test", allow::insert));
     REQUIRE_FALSE(cache.empty());
     REQUIRE(cache.Delete(1));
     REQUIRE(cache.empty());

@@ -34,15 +34,15 @@ template<
     size_t CACHE_SIZE,
     typename KeyType,
     typename ValueType,
-    Sync            SyncType,
+    sync            sync_type,
     BatchInsertEnum BatchType>
 static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
 {
-    std::mutex                              cout_lock{};
-    TlruCache<KeyType, ValueType, SyncType> lru_cache{CACHE_SIZE};
+    std::mutex                               cout_lock{};
+    TlruCache<KeyType, ValueType, sync_type> lru_cache{CACHE_SIZE};
 
     std::cout << "TLRU ";
-    if constexpr (SyncType == Sync::YES)
+    if constexpr (sync_type == sync::yes)
     {
         std::cout << "SYNC ";
     }
@@ -115,7 +115,7 @@ static auto tlru_cache_bench_test(std::chrono::seconds ttl) -> void
         }
         else
         {
-            std::vector<typename TlruCache<KeyType, ValueType, SyncType>::KeyValue> data;
+            std::vector<typename TlruCache<KeyType, ValueType, sync_type>::KeyValue> data;
             data.reserve(worker_iterations);
 
             for (size_t i = 0; i < worker_iterations; ++i)
@@ -223,15 +223,15 @@ template<
     size_t CACHE_SIZE,
     typename KeyType,
     typename ValueType,
-    Sync            SyncType,
+    sync            sync_type,
     BatchInsertEnum BatchType>
 static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
 {
-    std::mutex                               cout_lock{};
-    UtlruCache<KeyType, ValueType, SyncType> lru_cache{ttl, CACHE_SIZE};
+    std::mutex                                cout_lock{};
+    UtlruCache<KeyType, ValueType, sync_type> lru_cache{ttl, CACHE_SIZE};
 
     std::cout << "ULRU ";
-    if constexpr (SyncType == Sync::YES)
+    if constexpr (sync_type == sync::yes)
     {
         std::cout << "SYNC ";
     }
@@ -303,7 +303,7 @@ static auto utlru_cache_bench_test(std::chrono::seconds ttl) -> void
         }
         else
         {
-            std::vector<typename UtlruCache<KeyType, ValueType, SyncType>::KeyValue> data;
+            std::vector<typename UtlruCache<KeyType, ValueType, sync_type>::KeyValue> data;
             data.reserve(worker_iterations);
 
             for (size_t i = 0; i < worker_iterations; ++i)
@@ -411,15 +411,15 @@ template<
     size_t CACHE_SIZE,
     typename KeyType,
     typename ValueType,
-    Sync            SyncType,
+    sync            sync_type,
     BatchInsertEnum BatchType>
 static auto lru_cache_bench_test() -> void
 {
-    std::mutex                             cout_lock{};
-    LruCache<KeyType, ValueType, SyncType> lru_cache{CACHE_SIZE};
+    std::mutex                              cout_lock{};
+    LruCache<KeyType, ValueType, sync_type> lru_cache{CACHE_SIZE};
 
     std::cout << "LRU ";
-    if constexpr (SyncType == Sync::YES)
+    if constexpr (sync_type == sync::yes)
     {
         std::cout << "SYNC ";
     }
@@ -491,7 +491,7 @@ static auto lru_cache_bench_test() -> void
         }
         else
         {
-            std::vector<typename LruCache<KeyType, ValueType, SyncType>::KeyValue> data;
+            std::vector<typename LruCache<KeyType, ValueType, sync_type>::KeyValue> data;
             data.reserve(worker_iterations);
 
             for (size_t i = 0; i < worker_iterations; ++i)
@@ -608,7 +608,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::NO>(10s);
     utlru_cache_bench_test<
         ITERATIONS,
@@ -616,7 +616,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::NO>(10s);
     lru_cache_bench_test<
         ITERATIONS,
@@ -624,29 +624,29 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, Sync::YES, BatchInsertEnum::NO>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, sync::yes, BatchInsertEnum::NO>(
         10s);
-    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, Sync::YES, BatchInsertEnum::NO>(
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, sync::yes, BatchInsertEnum::NO>(
         10s);
-    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, Sync::YES, BatchInsertEnum::NO>();
+    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, sync::yes, BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::NO>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::NO>(
         10s);
-    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::NO>(
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::NO>(
         10s);
-    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::NO>();
+    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, Sync::YES, BatchInsertEnum::NO>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, sync::yes, BatchInsertEnum::NO>(
         10s);
-    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, Sync::YES, BatchInsertEnum::NO>(
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, sync::yes, BatchInsertEnum::NO>(
         10s);
-    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, Sync::YES, BatchInsertEnum::NO>();
+    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, sync::yes, BatchInsertEnum::NO>();
     std::cout << "\n";
 
     /**
@@ -658,7 +658,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>(10s);
     utlru_cache_bench_test<
         ITERATIONS,
@@ -666,7 +666,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>(10s);
     lru_cache_bench_test<
         ITERATIONS,
@@ -674,11 +674,11 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, Sync::YES, BatchInsertEnum::YES>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, std::string, uint64_t, sync::yes, BatchInsertEnum::YES>(
         10s);
     utlru_cache_bench_test<
         ITERATIONS,
@@ -686,7 +686,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         uint64_t,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>(10s);
     lru_cache_bench_test<
         ITERATIONS,
@@ -694,18 +694,18 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         std::string,
         uint64_t,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::YES>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::YES>(
         10s);
-    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::YES>(
+    utlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::YES>(
         10s);
-    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, Sync::YES, BatchInsertEnum::YES>();
+    lru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, uint64_t, sync::yes, BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, Sync::YES, BatchInsertEnum::YES>(
+    tlru_cache_bench_test<ITERATIONS, WORKER_COUNT, CACHE_SIZE, uint64_t, std::string, sync::yes, BatchInsertEnum::YES>(
         10s);
     utlru_cache_bench_test<
         ITERATIONS,
@@ -713,7 +713,7 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         uint64_t,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>(10s);
     lru_cache_bench_test<
         ITERATIONS,
@@ -721,54 +721,54 @@ int main(int argc, char* argv[])
         CACHE_SIZE,
         uint64_t,
         std::string,
-        Sync::YES,
+        sync::yes,
         BatchInsertEnum::YES>();
     std::cout << "\n";
 
     /**
      * UNSYNC INDIVIDUAL
      */
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::NO>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::NO>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::NO>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::NO>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::NO>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::NO>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::NO>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::NO>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::NO>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::NO>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::NO>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::NO>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::NO>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::NO>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::NO>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::NO>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::NO>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::NO>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::NO>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::NO>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::NO>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::NO>();
     std::cout << "\n";
 
     /**
      * UNSYNC BATCH
      */
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::YES>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::YES>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, Sync::NO, BatchInsertEnum::YES>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::YES>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, std::string, sync::no, BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::YES>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::YES>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, Sync::NO, BatchInsertEnum::YES>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::YES>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, std::string, uint64_t, sync::no, BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::YES>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::YES>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, Sync::NO, BatchInsertEnum::YES>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::YES>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, uint64_t, sync::no, BatchInsertEnum::YES>();
     std::cout << "\n";
 
-    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::YES>(10s);
-    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::YES>(10s);
-    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, Sync::NO, BatchInsertEnum::YES>();
+    tlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::YES>(10s);
+    utlru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::YES>(10s);
+    lru_cache_bench_test<ITERATIONS, 1, CACHE_SIZE, uint64_t, std::string, sync::no, BatchInsertEnum::YES>();
     std::cout << "\n";
 
     return 0;

@@ -26,15 +26,15 @@ namespace cappuccino
  * being evicted at once.
  *
  * This map is sync aware and can be used concurrently from multiple threads
- * safely. To remove locks/synchronization use Sync::NO when creating the cache.
+ * safely. To remove locks/synchronization use sync::no when creating the cache.
  *
  * @tparam KeyType The key type.  Must support std::hash().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if
  * your data structure value is large it is advisable to store in a shared ptr.
- * @tparam SyncType By default this map is thread safe, can be disabled for maps
+ * @tparam sync_type By default this map is thread safe, can be disabled for maps
  * specific to a single thread.
  */
-template<typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
+template<typename KeyType, typename ValueType, sync sync_type = sync::yes>
 class UtMap
 {
 public:
@@ -61,11 +61,11 @@ public:
      * update will reset the TTL.
      * @param key The key to store the value under.
      * @param value The value of data to store.
-     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return True if the operation was successful based on `allow`.
      */
-    auto Insert(const KeyType& key, ValueType value, Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
+    auto Insert(const KeyType& key, ValueType value, allow a = allow::insert_or_update) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs using the default TTL.
@@ -74,12 +74,12 @@ public:
      * any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the map.
-     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
     template<typename RangeType>
-    auto InsertRange(RangeType&& key_value_range, Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
+    auto InsertRange(RangeType&& key_value_range, allow a = allow::insert_or_update) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -176,7 +176,7 @@ private:
     };
 
     auto doInsertUpdate(
-        const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time, Allow allow) -> bool;
+        const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time, allow a) -> bool;
 
     auto doInsert(const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time) -> void;
 
@@ -190,7 +190,7 @@ private:
     auto doPrune(std::chrono::steady_clock::time_point now) -> size_t;
 
     /// Thread lock for all mutations.
-    Lock<SyncType> m_lock;
+    mutex<sync_type> m_lock;
 
     /// The keyed lookup data structure, the value is the KeyedElement struct
     /// which includes the value and an iterator to the associated m_ttl_list
@@ -207,13 +207,13 @@ private:
 
 namespace cappuccino
 {
-template<typename KeyType, typename ValueType, Sync SyncType>
-UtMap<KeyType, ValueType, SyncType>::UtMap(std::chrono::milliseconds uniform_ttl) : m_uniform_ttl(uniform_ttl)
+template<typename KeyType, typename ValueType, sync sync_type>
+UtMap<KeyType, ValueType, sync_type>::UtMap(std::chrono::milliseconds uniform_ttl) : m_uniform_ttl(uniform_ttl)
 {
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value, Allow allow) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::Insert(const KeyType& key, ValueType value, allow a) -> bool
 {
     std::lock_guard guard{m_lock};
     const auto      now         = std::chrono::steady_clock::now();
@@ -221,12 +221,12 @@ auto UtMap<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType v
 
     doPrune(now);
 
-    return doInsertUpdate(key, std::move(value), expire_time, allow);
+    return doInsertUpdate(key, std::move(value), expire_time, a);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto UtMap<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_range, Allow allow) -> size_t
+auto UtMap<KeyType, ValueType, sync_type>::InsertRange(RangeType&& key_value_range, allow a) -> size_t
 {
     size_t          inserted{0};
     std::lock_guard guard{m_lock};
@@ -237,7 +237,7 @@ auto UtMap<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_rang
 
     for (auto& [key, value] : key_value_range)
     {
-        if (doInsertUpdate(key, std::move(value), expire_time, allow))
+        if (doInsertUpdate(key, std::move(value), expire_time, a))
         {
             ++inserted;
         }
@@ -246,8 +246,8 @@ auto UtMap<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_rang
     return inserted;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::Delete(const KeyType& key) -> bool
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();
@@ -266,9 +266,9 @@ auto UtMap<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
     }
 };
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto UtMap<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
+auto UtMap<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
 {
     size_t          deleted{0};
     std::lock_guard guard{m_lock};
@@ -289,8 +289,8 @@ auto UtMap<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>& 
     return deleted;
 };
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::Find(const KeyType& key) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::Find(const KeyType& key) -> std::optional<ValueType>
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();
@@ -300,9 +300,9 @@ auto UtMap<KeyType, ValueType, SyncType>::Find(const KeyType& key) -> std::optio
     return doFind(key);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto UtMap<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& key_range)
+auto UtMap<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -321,9 +321,9 @@ auto UtMap<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& ke
     return output;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto UtMap<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optional_value_range) -> void
+auto UtMap<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range) -> void
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();
@@ -336,29 +336,29 @@ auto UtMap<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optional_
     }
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::CleanExpiredValues() -> size_t
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::CleanExpiredValues() -> size_t
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();
     return doPrune(now);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::size() const -> size_t
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::size() const -> size_t
 {
     std::atomic_thread_fence(std::memory_order_acquire);
     return m_keyed_elements.size();
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doInsertUpdate(
-    const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time, Allow allow) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doInsertUpdate(
+    const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time, allow a) -> bool
 {
     const auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
     {
-        if (update_allowed(allow))
+        if (update_allowed(a))
         {
             doUpdate(keyed_position, std::move(value), expire_time);
             return true;
@@ -366,7 +366,7 @@ auto UtMap<KeyType, ValueType, SyncType>::doInsertUpdate(
     }
     else
     {
-        if (insert_allowed(allow))
+        if (insert_allowed(a))
         {
             doInsert(key, std::move(value), expire_time);
             return true;
@@ -375,8 +375,8 @@ auto UtMap<KeyType, ValueType, SyncType>::doInsertUpdate(
     return false;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doInsert(
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doInsert(
     const KeyType& key, ValueType&& value, std::chrono::steady_clock::time_point expire_time) -> void
 {
     KeyedElement element;
@@ -390,8 +390,8 @@ auto UtMap<KeyType, ValueType, SyncType>::doInsert(
     keyed_position->second.m_ttl_position = std::prev(m_ttl_list.end());
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doUpdate(
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doUpdate(
     KeyedIterator keyed_position, ValueType&& value, std::chrono::steady_clock::time_point expire_time) -> void
 {
     auto& element   = keyed_position->second;
@@ -407,16 +407,16 @@ auto UtMap<KeyType, ValueType, SyncType>::doUpdate(
     element.m_ttl_position = std::prev(m_ttl_list.end());
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doDelete(KeyedIterator keyed_elements_position) -> void
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doDelete(KeyedIterator keyed_elements_position) -> void
 {
     m_ttl_list.erase(keyed_elements_position->second.m_ttl_position);
 
     m_keyed_elements.erase(keyed_elements_position);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doFind(const KeyType& key) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doFind(const KeyType& key) -> std::optional<ValueType>
 {
     const auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
@@ -427,8 +427,8 @@ auto UtMap<KeyType, ValueType, SyncType>::doFind(const KeyType& key) -> std::opt
     return {};
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto UtMap<KeyType, ValueType, SyncType>::doPrune(std::chrono::steady_clock::time_point now) -> size_t
+template<typename KeyType, typename ValueType, sync sync_type>
+auto UtMap<KeyType, ValueType, sync_type>::doPrune(std::chrono::steady_clock::time_point now) -> size_t
 {
     const auto  ttl_begin = m_ttl_list.begin();
     const auto  ttl_end   = m_ttl_list.end();

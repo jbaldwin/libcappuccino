@@ -19,10 +19,10 @@ namespace cappuccino
  * @tparam KeyType The key type.  Must support std::hash().
  * @tparam ValueType The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam SyncType By default this cache is thread safe, can be disabled for caches
+ * @tparam sync_type By default this cache is thread safe, can be disabled for caches
  *                  specific to a single thread.
  */
-template<typename KeyType, typename ValueType, Sync SyncType = Sync::YES>
+template<typename KeyType, typename ValueType, sync sync_type = sync::yes>
 class RrCache
 {
 private:
@@ -47,11 +47,11 @@ public:
      * Inserts or updates the given key value pair.
      * @param key The key to store the value under.
      * @param value The value of the data to store.
-     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return True if the operation was successful based on `allow`.
      */
-    auto Insert(const KeyType& key, ValueType value, Allow allow = Allow::INSERT_OR_UPDATE) -> bool;
+    auto Insert(const KeyType& key, ValueType value, allow a = allow::insert_or_update) -> bool;
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
@@ -60,12 +60,12 @@ public:
      * into any iterable container to satisfy this requirement.
      * @tparam RangeType A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
-     * @param allow Allowed methods of insertion | update.  Defaults to allowing
+     * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
     template<typename RangeType>
-    auto InsertRange(RangeType&& key_value_range, Allow allow = Allow::INSERT_OR_UPDATE) -> size_t;
+    auto InsertRange(RangeType&& key_value_range, allow a = allow::insert_or_update) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -137,7 +137,7 @@ private:
         ValueType     m_value;
     };
 
-    auto doInsertUpdate(const KeyType& key, ValueType&& value, Allow allow) -> bool;
+    auto doInsertUpdate(const KeyType& key, ValueType&& value, allow a) -> bool;
 
     auto doInsert(const KeyType& key, ValueType&& value) -> void;
 
@@ -150,7 +150,7 @@ private:
     auto doPrune() -> void;
 
     /// Cache lock for all mutations if sync is enabled.
-    Lock<SyncType> m_lock;
+    mutex<sync_type> m_lock;
 
     /// The main store for the key value pairs and metadata for each element.
     std::vector<Element> m_elements;
@@ -167,8 +167,8 @@ private:
     std::mt19937 m_mt;
 };
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-RrCache<KeyType, ValueType, SyncType>::RrCache(size_t capacity, float max_load_factor)
+template<typename KeyType, typename ValueType, sync sync_type>
+RrCache<KeyType, ValueType, sync_type>::RrCache(size_t capacity, float max_load_factor)
     : m_elements(capacity),
       m_open_list(capacity),
       m_random_device(),
@@ -180,16 +180,16 @@ RrCache<KeyType, ValueType, SyncType>::RrCache(size_t capacity, float max_load_f
     m_keyed_elements.reserve(capacity);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::Insert(const KeyType& key, ValueType value, Allow allow) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::Insert(const KeyType& key, ValueType value, allow a) -> bool
 {
     std::lock_guard guard{m_lock};
-    return doInsertUpdate(key, std::move(value), allow);
+    return doInsertUpdate(key, std::move(value), a);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto RrCache<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_range, Allow allow) -> size_t
+auto RrCache<KeyType, ValueType, sync_type>::InsertRange(RangeType&& key_value_range, allow a) -> size_t
 {
     size_t inserted{0};
 
@@ -197,7 +197,7 @@ auto RrCache<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_ra
         std::lock_guard guard{m_lock};
         for (auto& [key, value] : key_value_range)
         {
-            if (doInsertUpdate(key, std::move(value), allow))
+            if (doInsertUpdate(key, std::move(value), a))
             {
                 ++inserted;
             }
@@ -207,8 +207,8 @@ auto RrCache<KeyType, ValueType, SyncType>::InsertRange(RangeType&& key_value_ra
     return inserted;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::Delete(const KeyType& key) -> bool
 {
     std::lock_guard guard{m_lock};
     auto            keyed_position = m_keyed_elements.find(key);
@@ -223,9 +223,9 @@ auto RrCache<KeyType, ValueType, SyncType>::Delete(const KeyType& key) -> bool
     }
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto RrCache<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
+auto RrCache<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
 {
     size_t deleted_elements{0};
 
@@ -243,16 +243,16 @@ auto RrCache<KeyType, ValueType, SyncType>::DeleteRange(const RangeType<KeyType>
     return deleted_elements;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::Find(const KeyType& key) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::Find(const KeyType& key) -> std::optional<ValueType>
 {
     std::lock_guard guard{m_lock};
     return doFind(key);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<template<class...> typename RangeType>
-auto RrCache<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& key_range)
+auto RrCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -269,9 +269,9 @@ auto RrCache<KeyType, ValueType, SyncType>::FindRange(const RangeType<KeyType>& 
     return output;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
+template<typename KeyType, typename ValueType, sync sync_type>
 template<typename RangeType>
-auto RrCache<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optional_value_range) -> void
+auto RrCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range) -> void
 {
     std::lock_guard guard{m_lock};
     for (auto& [key, optional_value] : key_optional_value_range)
@@ -280,13 +280,13 @@ auto RrCache<KeyType, ValueType, SyncType>::FindRangeFill(RangeType& key_optiona
     }
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doInsertUpdate(const KeyType& key, ValueType&& value, Allow allow) -> bool
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doInsertUpdate(const KeyType& key, ValueType&& value, allow a) -> bool
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
     {
-        if (update_allowed(allow))
+        if (update_allowed(a))
         {
             doUpdate(keyed_position, std::move(value));
             return true;
@@ -294,7 +294,7 @@ auto RrCache<KeyType, ValueType, SyncType>::doInsertUpdate(const KeyType& key, V
     }
     else
     {
-        if (insert_allowed(allow))
+        if (insert_allowed(a))
         {
             doInsert(key, std::move(value));
             return true;
@@ -303,8 +303,8 @@ auto RrCache<KeyType, ValueType, SyncType>::doInsertUpdate(const KeyType& key, V
     return false;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doInsert(const KeyType& key, ValueType&& value) -> void
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doInsert(const KeyType& key, ValueType&& value) -> void
 {
     if (m_open_list_end >= m_elements.size())
     {
@@ -323,15 +323,15 @@ auto RrCache<KeyType, ValueType, SyncType>::doInsert(const KeyType& key, ValueTy
     ++m_open_list_end;
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doUpdate(RrCache::KeyedIterator keyed_position, ValueType&& value) -> void
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doUpdate(RrCache::KeyedIterator keyed_position, ValueType&& value) -> void
 {
     Element& element = m_elements[keyed_position->second];
     element.m_value  = std::move(value);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doDelete(size_t element_idx) -> void
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doDelete(size_t element_idx) -> void
 {
     Element& element = m_elements[element_idx];
 
@@ -350,8 +350,8 @@ auto RrCache<KeyType, ValueType, SyncType>::doDelete(size_t element_idx) -> void
     m_keyed_elements.erase(element.m_keyed_position);
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doFind(const KeyType& key) -> std::optional<ValueType>
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doFind(const KeyType& key) -> std::optional<ValueType>
 {
     auto keyed_position = m_keyed_elements.find(key);
     if (keyed_position != m_keyed_elements.end())
@@ -364,8 +364,8 @@ auto RrCache<KeyType, ValueType, SyncType>::doFind(const KeyType& key) -> std::o
     return {};
 }
 
-template<typename KeyType, typename ValueType, Sync SyncType>
-auto RrCache<KeyType, ValueType, SyncType>::doPrune() -> void
+template<typename KeyType, typename ValueType, sync sync_type>
+auto RrCache<KeyType, ValueType, sync_type>::doPrune() -> void
 {
     if (m_open_list_end > 0)
     {

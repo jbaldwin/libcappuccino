@@ -45,7 +45,7 @@ TEST_CASE("UtSet Update Only")
 {
     UtSet<uint64_t> set{50ms};
 
-    REQUIRE_FALSE(set.Insert(1, Allow::UPDATE));
+    REQUIRE_FALSE(set.Insert(1, allow::update));
     REQUIRE_FALSE(set.Find(1));
 }
 
@@ -67,7 +67,7 @@ TEST_CASE("UtSet InsertRange Insert Only")
     {
         std::vector<uint64_t> inserts{1, 2, 3};
 
-        auto inserted = set.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = set.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 3);
     }
 
@@ -80,7 +80,7 @@ TEST_CASE("UtSet InsertRange Insert Only")
     {
         std::vector<uint64_t> inserts{1, 2, 3, 4, 5};
 
-        auto inserted = set.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = set.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 2);
     }
 
@@ -99,7 +99,7 @@ TEST_CASE("UtSet InsertRange Update Only")
     {
         std::vector<uint64_t> inserts{1, 2, 3};
 
-        auto inserted = set.InsertRange(std::move(inserts), Allow::UPDATE);
+        auto inserted = set.InsertRange(std::move(inserts), allow::update);
         REQUIRE(inserted == 0);
     }
 
@@ -144,7 +144,7 @@ TEST_CASE("UtSet Delete")
 {
     UtSet<uint64_t> set{50ms};
 
-    REQUIRE(set.Insert(1, Allow::INSERT));
+    REQUIRE(set.Insert(1, allow::insert));
     REQUIRE(set.Find(1));
     REQUIRE(set.size() == 1);
 
@@ -281,7 +281,7 @@ TEST_CASE("UtSet empty")
     UtSet<uint64_t> set{50ms};
 
     REQUIRE(set.empty());
-    REQUIRE(set.Insert(1, Allow::INSERT));
+    REQUIRE(set.Insert(1, allow::insert));
     REQUIRE_FALSE(set.empty());
     REQUIRE(set.Delete(1));
     REQUIRE(set.empty());
@@ -395,8 +395,8 @@ TEST_CASE("UtSet update TTLs some expire")
     std::this_thread::sleep_for(80ms);
 
     // Update "Hello" TTL, but not "World".
-    REQUIRE(set.Insert("Hello", Allow::UPDATE));
-    REQUIRE_FALSE(set.Insert("World", Allow::INSERT));
+    REQUIRE(set.Insert("Hello", allow::update));
+    REQUIRE_FALSE(set.Insert("World", allow::insert));
 
     // Total of ~160ms, "World" should expire.
     std::this_thread::sleep_for(80ms);
@@ -417,29 +417,29 @@ TEST_CASE("UtSet inserts, updates, and insert_or_update")
 {
     UtSet<std::string> set{};
 
-    REQUIRE(set.Insert("Hello", Allow::INSERT));
-    REQUIRE(set.Insert("World", Allow::INSERT_OR_UPDATE));
-    REQUIRE(set.Insert("Hola")); // defaults to Allow::INSERT_OR_UPDATE
+    REQUIRE(set.Insert("Hello", allow::insert));
+    REQUIRE(set.Insert("World", allow::insert_or_update));
+    REQUIRE(set.Insert("Hola")); // defaults to allow::insert_or_update
 
-    REQUIRE_FALSE(set.Insert("Friend", Allow::UPDATE));
-    REQUIRE_FALSE(set.Insert("Hello", Allow::INSERT));
+    REQUIRE_FALSE(set.Insert("Friend", allow::update));
+    REQUIRE_FALSE(set.Insert("Hello", allow::insert));
 
     REQUIRE(set.Find("Hello"));
     REQUIRE(set.Find("World"));
     REQUIRE(set.Find("Hola"));
     REQUIRE_FALSE(set.Find("Friend"));
 
-    REQUIRE(set.Insert("Hello", Allow::UPDATE));
+    REQUIRE(set.Insert("Hello", allow::update));
     REQUIRE(set.Find("Hello"));
 }
 
 TEST_CASE("UtSet Insert only long running test.")
 {
     // This test is to make sure that an item that is continuously inserted into
-    // the cache with Allow::INSERT only and its the only item inserted that it
+    // the cache with allow::insert only and its the only item inserted that it
     // will eventually be evicted by its TTL.
 
-    UtSet<std::string> cache{1s};
+    UtSet<std::string> cache{50ms};
 
     uint64_t inserted{0};
     uint64_t blocked{0};
@@ -448,7 +448,7 @@ TEST_CASE("UtSet Insert only long running test.")
 
     while (inserted < 5)
     {
-        if (cache.Insert("test-key", Allow::INSERT))
+        if (cache.Insert("test-key", allow::insert))
         {
             ++inserted;
             std::cout << "inserted=" << inserted << "\n";
@@ -471,5 +471,5 @@ TEST_CASE("UtSet Insert only long running test.")
 
     REQUIRE(inserted == 5);
     REQUIRE(blocked > inserted);
-    REQUIRE(elapsed >= std::chrono::milliseconds{4000});
+    REQUIRE(elapsed >= std::chrono::milliseconds{200});
 }

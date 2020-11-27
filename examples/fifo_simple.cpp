@@ -5,19 +5,19 @@
 int main()
 {
     // Create a cache with 2 items.
-    cappuccino::FifoCache<uint64_t, std::string> fifo_cache{4};
+    cappuccino::fifo_cache<uint64_t, std::string> cache{4};
 
     // Insert some data.
-    fifo_cache.Insert(1, "one");
-    fifo_cache.Insert(2, "two");
-    fifo_cache.Insert(3, "three");
-    fifo_cache.Insert(4, "four");
+    cache.insert(1, "one");
+    cache.insert(2, "two");
+    cache.insert(3, "three");
+    cache.insert(4, "four");
 
     {
-        auto one   = fifo_cache.Find(1);
-        auto two   = fifo_cache.Find(2);
-        auto three = fifo_cache.Find(3);
-        auto four  = fifo_cache.Find(4);
+        auto one   = cache.find(1);
+        auto two   = cache.find(2);
+        auto three = cache.find(3);
+        auto four  = cache.find(4);
 
         if (one.has_value() && two.has_value() && three.has_value() && four.has_value())
         {
@@ -25,14 +25,14 @@ int main()
         }
     }
 
-    fifo_cache.Insert(5, "five");
+    cache.insert(5, "five");
 
     {
-        auto one   = fifo_cache.Find(1);
-        auto two   = fifo_cache.Find(2);
-        auto three = fifo_cache.Find(3);
-        auto four  = fifo_cache.Find(4);
-        auto five  = fifo_cache.Find(5);
+        auto one   = cache.find(1);
+        auto two   = cache.find(2);
+        auto three = cache.find(3);
+        auto four  = cache.find(4);
+        auto five  = cache.find(5);
 
         if (one.has_value())
         {
@@ -45,14 +45,14 @@ int main()
         }
     }
 
-    fifo_cache.Insert(6, "six");
+    cache.insert(6, "six");
 
     {
-        auto two   = fifo_cache.Find(2);
-        auto three = fifo_cache.Find(3);
-        auto four  = fifo_cache.Find(4);
-        auto five  = fifo_cache.Find(5);
-        auto six   = fifo_cache.Find(6);
+        auto two   = cache.find(2);
+        auto three = cache.find(3);
+        auto four  = cache.find(4);
+        auto five  = cache.find(5);
+        auto six   = cache.find(6);
 
         if (two.has_value())
         {

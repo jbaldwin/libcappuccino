@@ -7,17 +7,17 @@ using namespace cappuccino;
 
 TEST_CASE("InsertMethod to_string()")
 {
-    REQUIRE(to_string(Allow::INSERT) == "INSERT");
-    REQUIRE(to_string(Allow::UPDATE) == "UPDATE");
-    REQUIRE(to_string(Allow::INSERT_OR_UPDATE) == "INSERT_OR_UPDATE");
-    REQUIRE(to_string(static_cast<Allow>(5000)) == "INVALID_VALUE");
+    REQUIRE(to_string(allow::insert) == "insert");
+    REQUIRE(to_string(allow::update) == "update");
+    REQUIRE(to_string(allow::insert_or_update) == "insert_or_update");
+    REQUIRE(to_string(static_cast<allow>(5000)) == "invalid_value");
 }
 
-TEST_CASE("SyncImpl to_string()")
+TEST_CASE("syncImpl to_string()")
 {
-    REQUIRE(to_string(Sync::YES) == "YES");
-    REQUIRE(to_string(Sync::NO) == "NO");
-    REQUIRE(to_string(static_cast<Sync>(5000)) == "INVALID_VALUE");
+    REQUIRE(to_string(sync::yes) == "yes");
+    REQUIRE(to_string(sync::no) == "no");
+    REQUIRE(to_string(static_cast<cappuccino::sync>(5000)) == "invalid_value");
 }
 
 TEST_CASE("Peek to_string()")

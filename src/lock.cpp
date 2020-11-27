@@ -4,20 +4,20 @@ namespace cappuccino
 {
 using namespace std::string_literals;
 
-static const std::string SYNC_INVALID_VALUE = "INVALID_VALUE"s;
-static const std::string SYNC_NO            = "NO"s;
-static const std::string SYNC_YES           = "YES"s;
+static const std::string sync_invalid_value = "invalid_value"s;
+static const std::string sync_no            = "no"s;
+static const std::string sync_yes           = "yes"s;
 
-auto to_string(Sync sync) -> const std::string&
+auto to_string(sync s) -> const std::string&
 {
-    switch (sync)
+    switch (s)
     {
-        case Sync::NO:
-            return SYNC_NO;
-        case Sync::YES:
-            return SYNC_YES;
+        case sync::no:
+            return sync_no;
+        case sync::yes:
+            return sync_yes;
         default:
-            return SYNC_INVALID_VALUE;
+            return sync_invalid_value;
     }
 }
 

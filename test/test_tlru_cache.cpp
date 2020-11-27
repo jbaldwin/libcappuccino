@@ -72,12 +72,12 @@ TEST_CASE("Tlru Insert Only")
 {
     TlruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1min, 1, "test", allow::insert));
     auto value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
 
-    REQUIRE_FALSE(cache.Insert(1min, 1, "test2", Allow::INSERT));
+    REQUIRE_FALSE(cache.Insert(1min, 1, "test2", allow::insert));
     value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
@@ -87,7 +87,7 @@ TEST_CASE("Tlru Update Only")
 {
     TlruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE_FALSE(cache.Insert(1min, 1, "test", Allow::UPDATE));
+    REQUIRE_FALSE(cache.Insert(1min, 1, "test", allow::update));
     auto value = cache.Find(1);
     REQUIRE_FALSE(value.has_value());
 }
@@ -115,7 +115,7 @@ TEST_CASE("Tlru InsertRange Insert Only")
         std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
             {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 3);
     }
 
@@ -137,7 +137,7 @@ TEST_CASE("Tlru InsertRange Insert Only")
             {1min, 5, "test5"}, // new
         };
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::INSERT);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::insert);
         REQUIRE(inserted == 2);
     }
 
@@ -161,7 +161,7 @@ TEST_CASE("Tlru InsertRange Update Only")
         std::vector<std::tuple<std::chrono::minutes, uint64_t, std::string>> inserts{
             {1min, 1, "test1"}, {1min, 2, "test2"}, {1min, 3, "test3"}};
 
-        auto inserted = cache.InsertRange(std::move(inserts), Allow::UPDATE);
+        auto inserted = cache.InsertRange(std::move(inserts), allow::update);
         REQUIRE(inserted == 0);
     }
 
@@ -220,7 +220,7 @@ TEST_CASE("Tlru Delete")
 {
     TlruCache<uint64_t, std::string> cache{4};
 
-    REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1min, 1, "test", allow::insert));
     auto value = cache.Find(1);
     REQUIRE(value.has_value());
     REQUIRE(value.value() == "test");
@@ -374,7 +374,7 @@ TEST_CASE("Tlru empty")
     TlruCache<uint64_t, std::string> cache{4};
 
     REQUIRE(cache.empty());
-    REQUIRE(cache.Insert(1min, 1, "test", Allow::INSERT));
+    REQUIRE(cache.Insert(1min, 1, "test", allow::insert));
     REQUIRE_FALSE(cache.empty());
     REQUIRE(cache.Delete(1));
     REQUIRE(cache.empty());
@@ -454,7 +454,7 @@ TEST_CASE("Tlru differnet ttls")
 TEST_CASE("TlruCache Insert only long running test.")
 {
     // This test is to make sure that an item that is continuously inserted into the cache
-    // with Allow::INSERT only and its the only item inserted that it will eventually
+    // with allow::insert only and its the only item inserted that it will eventually
     // be evicted by its TTL.
 
     TlruCache<std::string, std::monostate> cache{128};
@@ -466,7 +466,7 @@ TEST_CASE("TlruCache Insert only long running test.")
 
     while (inserted < 5)
     {
-        if (cache.Insert(1s, "test-key", std::monostate{}, Allow::INSERT))
+        if (cache.Insert(50ms, "test-key", std::monostate{}, allow::insert))
         {
             ++inserted;
             std::cout << "inserted=" << inserted << "\n";
@@ -489,5 +489,5 @@ TEST_CASE("TlruCache Insert only long running test.")
 
     REQUIRE(inserted == 5);
     REQUIRE(blocked > inserted);
-    REQUIRE(elapsed >= std::chrono::milliseconds{4000});
+    REQUIRE(elapsed >= std::chrono::milliseconds{200});
 }
