@@ -5,35 +5,35 @@
 int main()
 {
     // Create a cache with 2 items.
-    cappuccino::LfuCache<std::string, std::string> lfu_cache{2};
+    cappuccino::lfu_cache<std::string, std::string> cache{2};
 
     // Insert some data.
-    lfu_cache.Insert("foo", "Hello");
-    lfu_cache.Insert("bar", "World");
+    cache.insert("foo", "Hello");
+    cache.insert("bar", "World");
 
     // Touch foo twice.
-    auto foo1 = lfu_cache.Find("foo");
-    auto foo2 = lfu_cache.Find("foo");
+    auto foo1 = cache.find("foo");
+    auto foo2 = cache.find("foo");
 
     (void)foo1;
     (void)foo2;
 
     // Touch bar once.
-    auto bar1 = lfu_cache.Find("bar");
+    auto bar1 = cache.find("bar");
 
     (void)bar1;
 
     // Insert foobar, bar should be replaced.
-    lfu_cache.Insert("foobar", "Hello World");
+    cache.insert("foobar", "Hello World");
 
-    auto bar2 = lfu_cache.FindWithUseCount("bar");
+    auto bar2 = cache.find_with_use_count("bar");
     if (bar2.has_value())
     {
         std::cout << "bar2 should not have a value!" << std::endl;
     }
 
-    auto foo3   = lfu_cache.FindWithUseCount("foo");
-    auto foobar = lfu_cache.FindWithUseCount("foobar");
+    auto foo3   = cache.find_with_use_count("foo");
+    auto foobar = cache.find_with_use_count("foobar");
 
     if (foo3.has_value())
     {

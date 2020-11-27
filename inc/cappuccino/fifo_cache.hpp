@@ -59,6 +59,14 @@ public:
         return do_insert_update(key, std::move(value), a);
     }
 
+    /**
+     * Inserts or updates the given iterator range of key value pairs.
+     * @tparam iterator An iterator that contains the set of key values pairs to insert or update.
+     * @param begin The first key value to pair to insert.
+     * @param end One past the last key value pair to insert.
+     * @param a Allowed methods of insertion | update.  Defaults to allowing insertsion and updates.
+     * @return The number of elements inserted based on `allow`.
+     */
     template<typename iterator>
     auto insert(iterator begin, iterator end, allow a = allow::insert_or_update) -> size_t
     {
@@ -84,8 +92,6 @@ public:
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
      * that has 2 values in the {key_type, value_type} ordering.
-     * There is a simple struct provided on the LfuCache::KeyValue that can be put
-     * into any iterable container to satisfy this requirement.
      * @tparam range_type A container with two items, key_type, value_type.
      * @param key_value_range The elements to insert or update into the cache.
      * @param a Allowed methods of insertion | update.  Defaults to allowing
@@ -109,7 +115,7 @@ public:
         auto            keyed_position = m_keyed_elements.find(key);
         if (keyed_position != m_keyed_elements.end())
         {
-            do_delete(keyed_position->second);
+            do_erase(keyed_position->second);
             return true;
         }
         else
@@ -137,7 +143,7 @@ public:
             if (keyed_position != m_keyed_elements.end())
             {
                 ++deleted_elements;
-                do_delete(keyed_position->second);
+                do_erase(keyed_position->second);
             }
             ++begin;
         }
@@ -335,7 +341,7 @@ private:
         // there is no access update in a fifo cache.
     }
 
-    auto do_delete(fifo_iterator fifo_position) -> void
+    auto do_erase(fifo_iterator fifo_position) -> void
     {
         element& e = *fifo_position;
 
