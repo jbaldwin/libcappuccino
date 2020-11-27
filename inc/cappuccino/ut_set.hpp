@@ -53,14 +53,14 @@ public:
 
     /**
      * Inserts or updates a range of keys with uniform TTL.
-     * @tparam RangeType A container of KeyTypes.
+     * @tparam range_type A container of KeyTypes.
      * @param key_range The elements to insert or update into the set.
      * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template<typename RangeType>
-    auto InsertRange(RangeType&& key_range, allow a = allow::insert_or_update) -> size_t;
+    template<typename range_type>
+    auto InsertRange(range_type&& key_range, allow a = allow::insert_or_update) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -71,13 +71,13 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g.
+     * @tparam range_type A container with the set of keys to delete, e.g.
      * vector<k> or set<k>.
      * @param key_range The keys to delete from the set.
      * @return The number of items deleted from the set.
      */
-    template<template<class...> typename RangeType>
-    auto DeleteRange(const RangeType<KeyType>& key_range) -> size_t;
+    template<template<class...> typename range_type>
+    auto DeleteRange(const range_type<KeyType>& key_range) -> size_t;
 
     /**
      * Attempts to find the given key.
@@ -88,13 +88,13 @@ public:
 
     /**
      * Attempts to find all the given keys presence.
-     * @tparam RangeType A container with the set of keys to lookup, e.g.
+     * @tparam range_type A container with the set of keys to lookup, e.g.
      * vector<KeyType>.
      * @param key_range A container with the set of keys to lookup.
      * @return All input keys with a bool indicating if it exists.
      */
-    template<template<class...> typename RangeType>
-    auto FindRange(const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>;
+    template<template<class...> typename range_type>
+    auto FindRange(const range_type<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>;
 
     /**
      * Attempts to find all given keys presence.
@@ -103,12 +103,12 @@ public:
      * values all bools. The keys that are found will have the bools set
      * indicating presence in the set.
      *
-     * @tparam RangeType A container with a pair of optional items,
+     * @tparam range_type A container with a pair of optional items,
      *                   e.g. vector<pair<k, bool>> or map<k, bool>.
      * @param key_bool_range The keys to bools to fill out.
      */
-    template<typename RangeType>
-    auto FindRangeFill(RangeType& key_bool_range) -> void;
+    template<typename range_type>
+    auto FindRangeFill(range_type& key_bool_range) -> void;
 
     /**
      * Trims the TTL list of items and evicts all expired elements.
@@ -199,8 +199,8 @@ auto UtSet<KeyType, sync_type>::Insert(const KeyType& key, allow a) -> bool
 }
 
 template<typename KeyType, sync sync_type>
-template<typename RangeType>
-auto UtSet<KeyType, sync_type>::InsertRange(RangeType&& key_range, allow a) -> size_t
+template<typename range_type>
+auto UtSet<KeyType, sync_type>::InsertRange(range_type&& key_range, allow a) -> size_t
 {
     size_t          inserted{0};
     std::lock_guard guard{m_lock};
@@ -241,8 +241,8 @@ auto UtSet<KeyType, sync_type>::Delete(const KeyType& key) -> bool
 };
 
 template<typename KeyType, sync sync_type>
-template<template<class...> typename RangeType>
-auto UtSet<KeyType, sync_type>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
+template<template<class...> typename range_type>
+auto UtSet<KeyType, sync_type>::DeleteRange(const range_type<KeyType>& key_range) -> size_t
 {
     size_t          deleted{0};
     std::lock_guard guard{m_lock};
@@ -275,8 +275,8 @@ auto UtSet<KeyType, sync_type>::Find(const KeyType& key) -> bool
 }
 
 template<typename KeyType, sync sync_type>
-template<template<class...> typename RangeType>
-auto UtSet<KeyType, sync_type>::FindRange(const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>
+template<template<class...> typename range_type>
+auto UtSet<KeyType, sync_type>::FindRange(const range_type<KeyType>& key_range) -> std::vector<std::pair<KeyType, bool>>
 {
     std::vector<std::pair<KeyType, bool>> output;
     output.reserve(std::size(key_range));
@@ -295,8 +295,8 @@ auto UtSet<KeyType, sync_type>::FindRange(const RangeType<KeyType>& key_range) -
 }
 
 template<typename KeyType, sync sync_type>
-template<typename RangeType>
-auto UtSet<KeyType, sync_type>::FindRangeFill(RangeType& key_bool_range) -> void
+template<typename range_type>
+auto UtSet<KeyType, sync_type>::FindRangeFill(range_type& key_bool_range) -> void
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();

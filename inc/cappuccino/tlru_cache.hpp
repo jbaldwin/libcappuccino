@@ -75,14 +75,14 @@ public:
      * that has 3 values in the {std::chrono::milliseconds, KeyType, ValueType} ordering.
      * There is a simple struct provided on the TlruCache::KeyValue that can be put into
      * any iterable container to satisfy this requirement.
-     * @tparam RangeType A container with three items, std::chrono::milliseconds, KeyType, ValueType.
+     * @tparam range_type A container with three items, std::chrono::milliseconds, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the cache.
      * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template<typename RangeType>
-    auto InsertRange(RangeType&& key_value_range, allow a = allow::insert_or_update) -> size_t;
+    template<typename range_type>
+    auto InsertRange(range_type&& key_value_range, allow a = allow::insert_or_update) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -93,12 +93,12 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g. vector<k> or set<k>.
+     * @tparam range_type A container with the set of keys to delete, e.g. vector<k> or set<k>.
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename RangeType>
-    auto DeleteRange(const RangeType<KeyType>& key_range) -> size_t;
+    template<template<class...> typename range_type>
+    auto DeleteRange(const range_type<KeyType>& key_range) -> size_t;
 
     /**
      * Attempts to find the given key's value.
@@ -110,13 +110,13 @@ public:
 
     /**
      * Attempts to find all the given keys values.
-     * @tparam RangeType A container with the set of keys to find their values, e.g. vector<KeyType>.
+     * @tparam range_type A container with the set of keys to find their values, e.g. vector<KeyType>.
      * @param key_range The keys to lookup their pairs.
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template<template<class...> typename RangeType>
-    auto FindRange(const RangeType<KeyType>& key_range, peek peek = peek::no)
+    template<template<class...> typename range_type>
+    auto FindRange(const range_type<KeyType>& key_range, peek peek = peek::no)
         -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
@@ -126,13 +126,13 @@ public:
      * empty optionals.  The keys that are found will have the optionals filled in with the
      * appropriate values from the cache.
      *
-     * @tparam RangeType A container with a pair of optional items,
+     * @tparam range_type A container with a pair of optional items,
      *                   e.g. vector<pair<k, optional<v>>>, or map<k, optional<v>>.
      * @param key_optional_value_range The keys to optional values to fill out.
      * @param peek Should the find act like all the items were not used?
      */
-    template<typename RangeType>
-    auto FindRangeFill(RangeType& key_optional_value_range, peek peek = peek::no) -> void;
+    template<typename range_type>
+    auto FindRangeFill(range_type& key_optional_value_range, peek peek = peek::no) -> void;
 
     /**
      * Trims the TTL list of items an expunges all expired elements.  This could be useful to use
@@ -250,8 +250,8 @@ auto TlruCache<KeyType, ValueType, sync_type>::Insert(
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<typename RangeType>
-auto TlruCache<KeyType, ValueType, sync_type>::InsertRange(RangeType&& key_value_range, allow a) -> size_t
+template<typename range_type>
+auto TlruCache<KeyType, ValueType, sync_type>::InsertRange(range_type&& key_value_range, allow a) -> size_t
 {
     auto   now = std::chrono::steady_clock::now();
     size_t inserted{0};
@@ -288,8 +288,8 @@ auto TlruCache<KeyType, ValueType, sync_type>::Delete(const KeyType& key) -> boo
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<template<class...> typename RangeType>
-auto TlruCache<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
+template<template<class...> typename range_type>
+auto TlruCache<KeyType, ValueType, sync_type>::DeleteRange(const range_type<KeyType>& key_range) -> size_t
 {
     size_t deleted_elements{0};
 
@@ -317,8 +317,8 @@ auto TlruCache<KeyType, ValueType, sync_type>::Find(const KeyType& key, peek pee
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<template<class...> typename RangeType>
-auto TlruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range, peek peek)
+template<template<class...> typename range_type>
+auto TlruCache<KeyType, ValueType, sync_type>::FindRange(const range_type<KeyType>& key_range, peek peek)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -338,8 +338,8 @@ auto TlruCache<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<typename RangeType>
-auto TlruCache<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range, peek peek) -> void
+template<typename range_type>
+auto TlruCache<KeyType, ValueType, sync_type>::FindRangeFill(range_type& key_optional_value_range, peek peek) -> void
 {
     auto now = std::chrono::steady_clock::now();
 

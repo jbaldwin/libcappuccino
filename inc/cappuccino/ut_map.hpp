@@ -72,14 +72,14 @@ public:
      * This expects a container that has 2 values in the {KeyType, ValueType}
      * ordering.  There is a simple struct UtMap::KeyValue that can be put into
      * any iterable container to satisfy this requirement.
-     * @tparam RangeType A container with two items, KeyType, ValueType.
+     * @tparam range_type A container with two items, KeyType, ValueType.
      * @param key_value_range The elements to insert or update into the map.
      * @param a Allowed methods of insertion | update.  Defaults to allowing
      *              insertions and updates.
      * @return The number of elements inserted based on `allow`.
      */
-    template<typename RangeType>
-    auto InsertRange(RangeType&& key_value_range, allow a = allow::insert_or_update) -> size_t;
+    template<typename range_type>
+    auto InsertRange(range_type&& key_value_range, allow a = allow::insert_or_update) -> size_t;
 
     /**
      * Attempts to delete the given key.
@@ -90,13 +90,13 @@ public:
 
     /**
      * Attempts to delete all given keys.
-     * @tparam RangeType A container with the set of keys to delete, e.g.
+     * @tparam range_type A container with the set of keys to delete, e.g.
      * vector<k> or set<k>.
      * @param key_range The keys to delete from the map.
      * @return The number of items deleted from the map.
      */
-    template<template<class...> typename RangeType>
-    auto DeleteRange(const RangeType<KeyType>& key_range) -> size_t;
+    template<template<class...> typename range_type>
+    auto DeleteRange(const range_type<KeyType>& key_range) -> size_t;
 
     /**
      * Attempts to find the given key's value.
@@ -108,14 +108,14 @@ public:
 
     /**
      * Attempts to find all the given keys values.
-     * @tparam RangeType A container with the set of keys to lookup, e.g.
+     * @tparam range_type A container with the set of keys to lookup, e.g.
      * vector<KeyType>.
      * @param key_range A container with the set of keys to lookup.
      * @return All input keys to either a std::nullopt if it doesn't exist, or the
      * value if it does.
      */
-    template<template<class...> typename RangeType>
-    auto FindRange(const RangeType<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
+    template<template<class...> typename range_type>
+    auto FindRange(const range_type<KeyType>& key_range) -> std::vector<std::pair<KeyType, std::optional<ValueType>>>;
 
     /**
      * Attempts to find all given keys values.
@@ -124,12 +124,12 @@ public:
      * values all empty optionals.  The keys that are found will have the
      * optionals filled in with the appropriate values from the map.
      *
-     * @tparam RangeType A container with a pair of optional items,
+     * @tparam range_type A container with a pair of optional items,
      *                   e.g. vector<pair<k, optional<v>>> or map<k, optional<v>>.
      * @param key_optional_value_range The keys to optional values to fill out.
      */
-    template<typename RangeType>
-    auto FindRangeFill(RangeType& key_optional_value_range) -> void;
+    template<typename range_type>
+    auto FindRangeFill(range_type& key_optional_value_range) -> void;
 
     /**
      * Trims the TTL list of items and evicts all expired elements.
@@ -225,8 +225,8 @@ auto UtMap<KeyType, ValueType, sync_type>::Insert(const KeyType& key, ValueType 
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<typename RangeType>
-auto UtMap<KeyType, ValueType, sync_type>::InsertRange(RangeType&& key_value_range, allow a) -> size_t
+template<typename range_type>
+auto UtMap<KeyType, ValueType, sync_type>::InsertRange(range_type&& key_value_range, allow a) -> size_t
 {
     size_t          inserted{0};
     std::lock_guard guard{m_lock};
@@ -267,8 +267,8 @@ auto UtMap<KeyType, ValueType, sync_type>::Delete(const KeyType& key) -> bool
 };
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<template<class...> typename RangeType>
-auto UtMap<KeyType, ValueType, sync_type>::DeleteRange(const RangeType<KeyType>& key_range) -> size_t
+template<template<class...> typename range_type>
+auto UtMap<KeyType, ValueType, sync_type>::DeleteRange(const range_type<KeyType>& key_range) -> size_t
 {
     size_t          deleted{0};
     std::lock_guard guard{m_lock};
@@ -301,8 +301,8 @@ auto UtMap<KeyType, ValueType, sync_type>::Find(const KeyType& key) -> std::opti
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<template<class...> typename RangeType>
-auto UtMap<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& key_range)
+template<template<class...> typename range_type>
+auto UtMap<KeyType, ValueType, sync_type>::FindRange(const range_type<KeyType>& key_range)
     -> std::vector<std::pair<KeyType, std::optional<ValueType>>>
 {
     std::vector<std::pair<KeyType, std::optional<ValueType>>> output;
@@ -322,8 +322,8 @@ auto UtMap<KeyType, ValueType, sync_type>::FindRange(const RangeType<KeyType>& k
 }
 
 template<typename KeyType, typename ValueType, sync sync_type>
-template<typename RangeType>
-auto UtMap<KeyType, ValueType, sync_type>::FindRangeFill(RangeType& key_optional_value_range) -> void
+template<typename range_type>
+auto UtMap<KeyType, ValueType, sync_type>::FindRangeFill(range_type& key_optional_value_range) -> void
 {
     std::lock_guard guard{m_lock};
     const auto      now = std::chrono::steady_clock::now();
