@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/jbaldwin/libcappuccino/badge.svg?branch=master)](https://coveralls.io/github/jbaldwin/libcappuccino?branch=master)
-[![Total alerts](https://img.shields.io/lgtm/alerts/g/jbaldwin/libcappuccino.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/jbaldwin/libcappuccino/alerts/)
+[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/jbaldwin/libcappuccino.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/jbaldwin/libcappuccino/context:cpp)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8ecca4da783a437eba8c62964fed59ba)](https://www.codacy.com/gh/jbaldwin/libcappuccino/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jbaldwin/libcappuccino&amp;utm_campaign=Badge_Grade)
 [![language][badge.language]][language]
 [![license][badge.license]][license]
@@ -12,21 +12,21 @@ https://github.com/jbaldwin/libcappuccino
 **libcappuccino** is licensed under the Apache 2.0 license.
 
 ## Overview
-*   Thread safe cache and associative datastructures.
-  *   Can disable thread safety for singly threaded apps.
-*   The following eviction policies are currently supported:
-  *   Cache (Fixed size contiguous memory).
-    *   First in first out (FIFO).
-    *   Least frequently used (LFU).
-    *   Least frequently used with dynamic aging (LFUDA).
-    *   Least recently used (LRU).
-    *   Most recently used (MRU).
-    *   Random Replacement (RR).
-    *   Time aware least recently used (TLRU).
-    *   Uniform time aware least recently used (UTLRU).
-  *   Associative (Dynamic size non-contiguous memory).
-    *   Uniform time aware set (UTSET).
-    *   Uniform time aware map (UTMAP).
+* Thread safe cache and associative datastructures.
+  * Can disable thread safety for singly threaded apps.
+* The following eviction policies are currently supported:
+  * Cache (Fixed size contiguous memory).
+    * First in first out (FIFO).
+    * Least frequently used (LFU).
+    * Least frequently used with dynamic aging (LFUDA).
+    * Least recently used (LRU).
+    * Most recently used (MRU).
+    * Random Replacement (RR).
+    * Time aware least recently used (TLRU).
+    * Uniform time aware least recently used (UTLRU).
+  * Associative (Dynamic size non-contiguous memory).
+    * Uniform time aware set (UTSET).
+    * Uniform time aware map (UTMAP).
 
 ## Usage
 
@@ -108,12 +108,12 @@ process.
 ```
 
 ##### Insert, Update, Insert Or Update
-Each `Insert()` method on the various caches takes an optional parameter `Allow` that tells the cache
-how the insert call should behave.  By default this parameter is set to allow `INSERT_OR_UPDATE` on the
+Each `insert()` method on the various caches takes an optional parameter `allow` that tells the cache
+how the insert call should behave.  By default this parameter is set to allow `insert_or_update` on the
 elements being inserted into the cache.  This means if they do not exist in the cache they will be added
 and if they do exists the values will be udpated and any metadata like TTLs will be adjusted/reset.  The
-caller can also specify this parameter as just `INSERT` to only allow the item to be added if it doesn't
-already exist or as `UPDATE` to only change the item in the cahce if it already exists.
+caller can also specify this parameter as just `insert` to only allow the item to be added if it doesn't
+already exist or as `update` to only change the item in the cahce if it already exists.
 
 ```C++
     #include <cappuccino/cappuccino.hpp>
