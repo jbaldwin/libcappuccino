@@ -58,7 +58,7 @@ public:
     {
         std::lock_guard guard{m_lock};
         return do_insert_update(key, std::move(value), a);
-    };
+    }
 
     /**
      * Inserts or updates a range of key value pairs.  This expects a container
