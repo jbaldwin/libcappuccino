@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 2.8)
 project(cappuccino CXX)
 
 # Set the githooks directory to auto format and update the readme.
-message("git config core.hooksPath .githooks")
+message("${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} -> git config --local core.hooksPath .githooks")
 execute_process(
-    COMMAND git config core.hooksPath .githooks
+    COMMAND git config --local core.hooksPath .githooks
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -13,6 +13,10 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(CAPPUCCINO_BUILD_EXAMPLES "Build the examples. Default=ON" ON)
 option(CAPPUCCINO_BUILD_TESTS    "Build the tests. Default=ON" ON)
 option(CAPPUCCINO_CODE_COVERAGE  "Enable code coverage, tests must also be enabled. Default=OFF" OFF)
+
+message("${PROJECT_NAME} CAPPUCCINO_BUILD_EXAMPLES = ${CAPPUCCINO_BUILD_EXAMPLES}")
+message("${PROJECT_NAME} CAPPUCCINO_BUILD_TESTS    = ${CAPPUCCINO_BUILD_TESTS}")
+message("${PROJECT_NAME} CAPPUCCINO_CODE_COVERAGE  = ${CAPPUCCINO_CODE_COVERAGE}")
 
 set(CAPPUCCINO_SOURCE_FILES
     inc/cappuccino/allow.hpp src/allow.cpp
