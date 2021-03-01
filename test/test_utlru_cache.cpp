@@ -507,4 +507,13 @@ TEST_CASE("Utlru clear cache.")
     REQUIRE(cache.insert(8, "yet more tests"));
     cache.clear();
     REQUIRE(cache.empty());
+    REQUIRE(cache.insert(2, "more tests"));
+    REQUIRE(cache.insert(6, "surprise! more tests!"));
+    auto surprise = cache.find(6);
+    REQUIRE(surprise.has_value());
+    REQUIRE(surprise.value() == "surprise! more tests!");
+    REQUIRE(cache.size() == 2);
+    cache.clear();
+    REQUIRE(cache.empty());
+    REQUIRE(cache.size() == 0);
 }
