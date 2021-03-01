@@ -163,7 +163,6 @@ public:
                 m_keyed_elements.clear();
                 m_keyed_elements.reserve(capacity);
                 m_ttl_list.clear();
-                // m_lru_end   = m_lru_list.begin();
                 m_used_size = 0;
             }
         }
