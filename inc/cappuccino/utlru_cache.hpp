@@ -149,6 +149,26 @@ public:
     }
 
     /**
+     * Removes all elements from the cache (which are destroyed), leaving the container size 0.
+     */
+    auto clear() -> void
+    {
+        {
+            std::lock_guard guard{m_lock};
+            if (m_used_size > 0)
+            {
+                const auto capacity = m_elements.capacity();
+                std::iota(m_lru_list.begin(), m_lru_list.end(), 0);
+                m_lru_end = m_lru_list.begin();
+                m_keyed_elements.clear();
+                m_keyed_elements.reserve(capacity);
+                m_ttl_list.clear();
+                m_used_size = 0;
+            }
+        }
+    }
+
+    /**
      * Attempts to find the given key's value.
      * @param key The key to lookup its value.
      * @param peek Should the find act like all the item was not used?
