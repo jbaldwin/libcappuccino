@@ -602,3 +602,24 @@ TEST_CASE("ut_map Insert only long running test.")
     REQUIRE(blocked > inserted);
     REQUIRE(elapsed >= std::chrono::milliseconds{200});
 }
+
+TEST_CASE("ut_map clear cache.")
+{
+    ut_map<uint64_t, std::string> cache{50ms};
+
+    REQUIRE(cache.empty());
+    REQUIRE(cache.insert(1, "test"));
+    REQUIRE(cache.insert(2, "more tests"));
+    REQUIRE(cache.insert(8, "yet more tests"));
+    cache.clear();
+    REQUIRE(cache.empty());
+    REQUIRE(cache.insert(2, "more tests"));
+    REQUIRE(cache.insert(6, "surprise! more tests!"));
+    auto surprise = cache.find(6);
+    REQUIRE(surprise.has_value());
+    REQUIRE(surprise.value() == "surprise! more tests!");
+    REQUIRE(cache.size() == 2);
+    cache.clear();
+    REQUIRE(cache.empty());
+    REQUIRE(cache.size() == 0);
+}
