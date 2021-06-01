@@ -243,6 +243,19 @@ public:
         return m_keyed_elements.size();
     }
 
+    /**
+     * Removes all elements from the cache (which are destroyed), leaving the container size 0.
+     */
+    auto clear() -> void
+    {
+        if (!empty())
+        {
+            std::lock_guard guard{m_lock};
+            m_keyed_elements.clear();
+            m_ttl_list.clear();
+        }
+    }
+
 private:
     struct keyed_element;
     struct ttl_element;
