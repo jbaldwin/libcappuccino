@@ -12,7 +12,7 @@
 //  You probably shouldn't edit it directly.
 //  ----------------------------------------------------------
 
-#include "catch_amalgamated.hpp"
+#include "catch.hpp"
 
 
 #ifndef CATCH_WINDOWS_H_PROXY_HPP_INCLUDED
