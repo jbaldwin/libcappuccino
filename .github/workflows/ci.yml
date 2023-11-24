@@ -24,7 +24,7 @@ jobs:
                         cmake \
                         git \
                         ninja-build \
-                        g++-9 \
+                        g++ \
                         clang
             -   name: build-release-g++
                 run: |
@@ -33,8 +33,8 @@ jobs:
                     cmake \
                         -GNinja \
                         -DCMAKE_BUILD_TYPE=Release \
-                        -DCMAKE_C_COMPILER=gcc-9 \
-                        -DCMAKE_CXX_COMPILER=g++-9 \
+                        -DCMAKE_C_COMPILER=gcc \
+                        -DCMAKE_CXX_COMPILER=g++ \
                         ..
                     ninja
             -   name: build-release-clang
