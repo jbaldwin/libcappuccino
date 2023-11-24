@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(libcappuccino_tests)
 
 set(LIBCAPPUCCINO_TEST_SOURCE_FILES
+    catch.cpp
     test_fifo_cache.cpp
     test_lfu_cache.cpp
     test_lfuda_cache.cpp
