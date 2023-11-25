@@ -443,7 +443,7 @@ private:
             // deleting from and re-inserting into the lfu data structure.
             size_t use_count = e.m_lfu_position->first;
             m_lfu_list.erase(e.m_lfu_position);
-            use_count *= m_dynamic_age_ratio;
+            use_count        = (size_t)(use_count * m_dynamic_age_ratio);
             e.m_lfu_position = m_lfu_list.emplace(use_count, da_start);
 
             // The last item is now this item!  This will maintain the insertion order.
