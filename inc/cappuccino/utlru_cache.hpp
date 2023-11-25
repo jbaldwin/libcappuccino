@@ -21,16 +21,16 @@ namespace cappuccino
  * efficient in managing the TTLs since they are uniform for all key value pairs
  * in the cache, rather than tracking items individually.
  *
- * This cache is sync aware and can be used concurrently from multiple threads safely.
+ * This cache is thread_safe aware and can be used concurrently from multiple threads safely.
  * To remove locks/synchronization use NO when creating the cache.
  *
  * @tparam key_type The key type.  Must support std::hash().
  * @tparam value_type The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam sync_type By default this cache is thread safe, can be disabled for caches specific
+ * @tparam thread_safe_type By default this cache is thread safe, can be disabled for caches specific
  *                  to a single thread.
  */
-template<typename key_type, typename value_type, sync sync_type = sync::yes>
+template<typename key_type, typename value_type, thread_safe thread_safe_type = thread_safe::yes>
 class utlru_cache
 {
     using keyed_iterator = typename std::unordered_map<key_type, size_t>::iterator;
@@ -454,7 +454,7 @@ private:
     }
 
     /// Cache lock for all mutations.
-    mutex<sync_type> m_lock;
+    mutex<thread_safe_type> m_lock;
 
     /// The uniform TTL for every key value pair inserted into the cache.
     std::chrono::milliseconds m_ttl;

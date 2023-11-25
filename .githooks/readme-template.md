@@ -120,8 +120,8 @@ Currently tested distros:
 *   fedora:latest
 
 Currently tested compilers:
-*   g++-9
-*   clang-9
+*   g++
+*   clang
 
 Contributing a new feature should include relevant tests.  Examples
 are welcome if understanding how the feature works is difficult or provides some additional value the tests otherwise cannot.
@@ -140,7 +140,7 @@ ctest -VV
 
 File bug reports, feature requests and questions using [GitHub Issues](https://github.com/jbaldwin/libcappuccino/issues)
 
-Copyright © 2017-2020, Josh Baldwin
+Copyright © 2017-2023, Josh Baldwin
 
 [badge.language]: https://img.shields.io/badge/language-C%2B%2B17-yellow.svg
 [badge.license]: https://img.shields.io/badge/license-Apache--2.0-blue

@@ -13,16 +13,16 @@ namespace cappuccino
  * Random Replacement (RR) Cache.
  * Each key value pair is evicted based upon a random eviction strategy.
  *
- * This cache is sync aware and can be used concurrently from multiple threads safely.
+ * This cache is thread_safe aware and can be used concurrently from multiple threads safely.
  * To remove locks/synchronization used NO when creating the cache.
  *
  * @tparam key_type The key type.  Must support std::hash().
  * @tparam value_type The value type.  This is returned by copy on a find, so if your data
  *                   structure value is large it is advisable to store in a shared ptr.
- * @tparam sync_type By default this cache is thread safe, can be disabled for caches
+ * @tparam thread_safe_type By default this cache is thread safe, can be disabled for caches
  *                  specific to a single thread.
  */
-template<typename key_type, typename value_type, sync sync_type = sync::yes>
+template<typename key_type, typename value_type, thread_safe thread_safe_type = thread_safe::yes>
 class rr_cache
 {
 private:
@@ -303,8 +303,8 @@ private:
         }
     }
 
-    /// Cache lock for all mutations if sync is enabled.
-    mutex<sync_type> m_lock;
+    /// Cache lock for all mutations if thread_safe is enabled.
+    mutex<thread_safe_type> m_lock;
 
     /// The main store for the key value pairs and metadata for each e.
     std::vector<element> m_elements;
