@@ -25,16 +25,16 @@ namespace cappuccino
  * performance during these operations if N elements are reaching their TTLs and
  * being evicted at once.
  *
- * This map is sync aware and can be used concurrently from multiple threads
- * safely. To remove locks/synchronization use sync::no when creating the cache.
+ * This map is thread_safe aware and can be used concurrently from multiple threads
+ * safely. To remove locks/synchronization use thread_safe::no when creating the cache.
  *
  * @tparam key_type The key type.  Must support std::hash().
  * @tparam value_type The value type.  This is returned by copy on a find, so if
  * your data structure value is large it is advisable to store in a shared ptr.
- * @tparam sync_type By default this map is thread safe, can be disabled for maps
+ * @tparam thread_safe_type By default this map is thread safe, can be disabled for maps
  * specific to a single thread.
  */
-template<typename key_type, typename value_type, sync sync_type = sync::yes>
+template<typename key_type, typename value_type, thread_safe thread_safe_type = thread_safe::yes>
 class ut_map
 {
 public:
@@ -379,7 +379,7 @@ private:
     }
 
     /// Thread lock for all mutations.
-    mutex<sync_type> m_lock;
+    mutex<thread_safe_type> m_lock;
 
     /// The keyed lookup data structure, the value is the keyed_element struct
     /// which includes the value and an iterator to the associated m_ttl_list

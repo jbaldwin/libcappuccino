@@ -15,9 +15,9 @@ TEST_CASE("InsertMethod to_string()")
 
 TEST_CASE("syncImpl to_string()")
 {
-    REQUIRE(to_string(sync::yes) == "yes");
-    REQUIRE(to_string(sync::no) == "no");
-    REQUIRE(to_string(static_cast<cappuccino::sync>(5000)) == "invalid_value");
+    REQUIRE(to_string(thread_safe::yes) == "yes");
+    REQUIRE(to_string(thread_safe::no) == "no");
+    REQUIRE(to_string(static_cast<cappuccino::thread_safe>(5000)) == "invalid_value");
 }
 
 TEST_CASE("peek to_string()")
