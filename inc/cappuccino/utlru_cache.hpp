@@ -128,8 +128,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename range_type>
-    auto erase_range(const range_type<key_type>& key_range) -> size_t
+    template<typename range_type>
+    auto erase_range(const range_type& key_range) -> size_t
     {
         size_t deleted_elements{0};
 

@@ -116,8 +116,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename range_type>
-    auto erase_range(const range_type<key_type>& key_range) -> size_t
+    template<typename range_type>
+    auto erase_range(const range_type& key_range) -> size_t
     {
         size_t deleted_elements{0};
 
@@ -154,8 +154,8 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template<template<class...> typename range_type>
-    auto find_range(const range_type<key_type>& key_range, peek peek = peek::no)
+    template<typename range_type>
+    auto find_range(const range_type& key_range, peek peek = peek::no)
         -> std::vector<std::pair<key_type, std::optional<value_type>>>
     {
         std::vector<std::pair<key_type, std::optional<value_type>>> output;
