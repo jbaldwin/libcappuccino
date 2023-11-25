@@ -136,7 +136,7 @@ public:
     {
         size_t deleted_elements{0};
 
-        std::lock_guard{m_lock};
+        std::lock_guard guard{m_lock};
         while (begin != end)
         {
             auto keyed_position = m_keyed_elements.find(*begin);

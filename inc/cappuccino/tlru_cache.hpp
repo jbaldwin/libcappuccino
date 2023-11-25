@@ -280,8 +280,8 @@ private:
             {
                 // If the item has expired and this is INSERT then allow the
                 // insert to proceed, this can just be an update in place.
-                const auto& [key, element_idx] = *keyed_position;
-                element& e                     = m_elements[element_idx];
+                const auto& [k, element_idx] = *keyed_position;
+                element& e                   = m_elements[element_idx];
                 if (now >= e.m_expire_time)
                 {
                     do_update(keyed_position, std::move(value), expire_time);
