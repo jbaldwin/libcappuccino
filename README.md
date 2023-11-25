@@ -2,7 +2,6 @@
 
 [![CI](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)
 [![Coverage Status](https://coveralls.io/repos/github/jbaldwin/libcappuccino/badge.svg?branch=master)](https://coveralls.io/github/jbaldwin/libcappuccino?branch=master)
-[![Language grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/jbaldwin/libcappuccino.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/jbaldwin/libcappuccino/context:cpp)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8ecca4da783a437eba8c62964fed59ba)](https://www.codacy.com/gh/jbaldwin/libcappuccino/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jbaldwin/libcappuccino&amp;utm_campaign=Badge_Grade)
 [![language][badge.language]][language]
 [![license][badge.license]][license]
@@ -13,7 +12,7 @@ https://github.com/jbaldwin/libcappuccino
 
 ## Overview
 * Thread safe cache and associative datastructures.
-  * Can disable thread safety for singly threaded apps.
+  * Can disable thread safety for singly threaded apps via `thread_safe::no`.
 * The following eviction policies are currently supported:
   * Cache (Fixed size contiguous memory).
     * First in first out (FIFO).
