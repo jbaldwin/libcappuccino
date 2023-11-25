@@ -1,7 +1,7 @@
 # libcappuccino - C++17 Cache and Associative Data Structure Library
 
-[![CI](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)](https://github.com/jbaldwin/libcappuccino/workflows/build/badge.svg)
-[![Coverage Status](https://coveralls.io/repos/github/jbaldwin/libcappuccino/badge.svg?branch=master)](https://coveralls.io/github/jbaldwin/libcappuccino?branch=master)
+[![build](https://github.com/jbaldwin/libcappuccino/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/jbaldwin/libcappuccino/actions/workflows/ci.yml)
+[![Coverage Status](https://coveralls.io/repos/github/jbaldwin/libcappuccino/badge.svg?branch=main)](https://coveralls.io/github/jbaldwin/libcappuccino?branch=main)
 [![Codacy Badge](https://app.codacy.com/project/badge/Grade/8ecca4da783a437eba8c62964fed59ba)](https://www.codacy.com/gh/jbaldwin/libcappuccino/dashboard?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=jbaldwin/libcappuccino&amp;utm_campaign=Badge_Grade)
 [![language][badge.language]][language]
 [![license][badge.license]][license]
