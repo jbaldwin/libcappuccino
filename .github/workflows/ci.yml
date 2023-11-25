@@ -127,8 +127,8 @@ jobs:
                 with:
                     github-token: ${{ secrets.GITHUB_TOKEN }}
                     path-to-lcov: build-debug-g++/libcappuccino_tests.info
-        build-windows-2022:
-        name: windows-2022
+    build-windows:
+        name: windows
         runs-on: windows-latest
         steps:
             -   name: Checkout

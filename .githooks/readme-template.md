@@ -117,10 +117,12 @@ This project has a GitHub Actions CI implementation to compile and run unit test
 Currently tested distros:
 *   ubuntu:latest
 *   fedora:latest
+*   msvc:latest
 
 Currently tested compilers:
 *   g++
 *   clang
+*   msvc
 
 Contributing a new feature should include relevant tests.  Examples
 are welcome if understanding how the feature works is difficult or provides some additional value the tests otherwise cannot.
