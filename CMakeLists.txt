@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.0)
 project(cappuccino CXX)
 
 # Set the githooks directory to auto format and update the readme.
