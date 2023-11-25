@@ -604,6 +604,9 @@ static auto lru_cache_bench_test() -> void
 
 int main(int argc, char* argv[])
 {
+    (void)argc;
+    (void)argv;
+
     constexpr size_t iterations   = 1'000'000;
     constexpr size_t worker_count = 12;
     constexpr size_t cache_size   = 100'000;
