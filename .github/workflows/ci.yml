@@ -127,3 +127,19 @@ jobs:
                 with:
                     github-token: ${{ secrets.GITHUB_TOKEN }}
                     path-to-lcov: build-debug-g++/libcappuccino_tests.info
+    build-windows:
+        name: windows
+        runs-on: windows-latest
+        steps:
+            -   name: Checkout
+                uses: actions/checkout@v2
+            -   name: build-release-cl
+                run: |
+                    mkdir build-release-cl
+                    cd build-release-cl
+                    cmake ..
+                    cmake --build . --config Release
+            -   name: test-release-cl
+                run: |
+                    cd build-release-cl
+                    ctest --build-config Release -VV

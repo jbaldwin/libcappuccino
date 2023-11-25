@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 project(libcappuccino_tests)
 
 set(LIBCAPPUCCINO_TEST_SOURCE_FILES
@@ -16,7 +16,11 @@ set(LIBCAPPUCCINO_TEST_SOURCE_FILES
 )
 
 add_executable(${PROJECT_NAME} main.cpp ${LIBCAPPUCCINO_TEST_SOURCE_FILES})
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino pthread)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+
+if(NOT MSVC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+endif()
 
 if(CAPPUCCINO_CODE_COVERAGE)
     target_compile_options(${PROJECT_NAME} PRIVATE --coverage)

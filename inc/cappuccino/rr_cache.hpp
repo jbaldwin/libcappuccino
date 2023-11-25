@@ -115,8 +115,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename range_type>
-    auto erase_range(const range_type<key_type>& key_range) -> size_t
+    template<typename range_type>
+    auto erase_range(const range_type& key_range) -> size_t
     {
         size_t deleted_elements{0};
 
@@ -151,9 +151,8 @@ public:
      * @param key_range The keys to lookup their pairs.
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template<template<class...> typename range_type>
-    auto find_range(const range_type<key_type>& key_range)
-        -> std::vector<std::pair<key_type, std::optional<value_type>>>
+    template<typename range_type>
+    auto find_range(const range_type& key_range) -> std::vector<std::pair<key_type, std::optional<value_type>>>
     {
         std::vector<std::pair<key_type, std::optional<value_type>>> output;
         output.reserve(std::size(key_range));

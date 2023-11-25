@@ -1,5 +1,8 @@
-cmake_minimum_required(VERSION 3.0)
-project(cappuccino CXX)
+cmake_minimum_required(VERSION 3.5)
+project(cappuccino
+    VERSION 0.9
+    LANGUAGES CXX
+    DESCRIPTION "C++17 Cache and Associative Data Structure Library")
 
 # Set the githooks directory to auto format and update the readme.
 message("${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR} -> git config --local core.hooksPath .githooks")
@@ -60,6 +63,8 @@ elseif(${CMAKE_CXX_COMPILER_ID} MATCHES "Clang")
         -Wpedantic
         -pedantic-errors
     )
+elseif(MSVC)
+    target_compile_options(${PROJECT_NAME} PUBLIC /W4)
 endif()
 
 if(CAPPUCCINO_BUILD_EXAMPLES)

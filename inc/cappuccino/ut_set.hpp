@@ -122,8 +122,8 @@ public:
      * @param key_range The keys to delete from the set.
      * @return The number of items deleted from the set.
      */
-    template<template<class...> typename range_type>
-    auto erase_range(const range_type<key_type>& key_range) -> size_t
+    template<typename range_type>
+    auto erase_range(const range_type& key_range) -> size_t
     {
         size_t          deleted{0};
         std::lock_guard guard{m_lock};
@@ -166,8 +166,8 @@ public:
      * @param key_range A container with the set of keys to lookup.
      * @return All input keys with a bool indicating if it exists.
      */
-    template<template<class...> typename range_type>
-    auto find_range(const range_type<key_type>& key_range) -> std::vector<std::pair<key_type, bool>>
+    template<typename range_type>
+    auto find_range(const range_type& key_range) -> std::vector<std::pair<key_type, bool>>
     {
         std::vector<std::pair<key_type, bool>> output;
         output.reserve(std::size(key_range));

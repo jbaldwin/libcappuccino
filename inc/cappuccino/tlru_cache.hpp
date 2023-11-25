@@ -126,8 +126,8 @@ public:
      * @param key_range The keys to delete from the cache.
      * @return The number of items deleted from the cache.
      */
-    template<template<class...> typename range_type>
-    auto erase_range(const range_type<key_type>& key_range) -> size_t
+    template<typename range_type>
+    auto erase_range(const range_type& key_range) -> size_t
     {
         size_t deleted_elements{0};
 
@@ -166,8 +166,8 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return The full set of keys to std::nullopt if the key wasn't found, or the value if found.
      */
-    template<template<class...> typename range_type>
-    auto find_range(const range_type<key_type>& key_range, peek peek = peek::no)
+    template<typename range_type>
+    auto find_range(const range_type& key_range, peek peek = peek::no)
         -> std::vector<std::pair<key_type, std::optional<value_type>>>
     {
         std::vector<std::pair<key_type, std::optional<value_type>>> output;
@@ -280,8 +280,8 @@ private:
             {
                 // If the item has expired and this is INSERT then allow the
                 // insert to proceed, this can just be an update in place.
-                const auto& [key, element_idx] = *keyed_position;
-                element& e                     = m_elements[element_idx];
+                const auto& [k, element_idx] = *keyed_position;
+                element& e                   = m_elements[element_idx];
                 if (now >= e.m_expire_time)
                 {
                     do_update(keyed_position, std::move(value), expire_time);

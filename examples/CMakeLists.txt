@@ -39,7 +39,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
 ### bench ###
 project(cap_bench CXX)
 add_executable(${PROJECT_NAME} bench.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino pthread)
+target_link_libraries(${PROJECT_NAME} PRIVATE cappuccino)
+if(NOT MSVC)
+    target_link_libraries(${PROJECT_NAME} PRIVATE pthread)
+endif()
 
 ### mru_simple ###
 project(cap_mru_simple CXX)
