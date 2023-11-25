@@ -189,8 +189,8 @@ public:
      * @param peek Should the find act like all the items were not used?
      * @return All input keys to either a std::nullopt if it doesn't exist, or the value if it does.
      */
-    template<template<class...> typename range_type, class range_allocator_type>
-    auto find_range(const range_type<key_type, range_allocator_type>& key_range, peek peek = peek::no)
+    template<typename range_type>
+    auto find_range(const range_type& key_range, peek peek = peek::no)
         -> std::vector<std::pair<key_type, std::optional<value_type>>>
     {
         std::vector<std::pair<key_type, std::optional<value_type>>> output;
