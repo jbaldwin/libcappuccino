@@ -142,4 +142,4 @@ jobs:
             -   name: test-release-cl
                 run: |
                     cd build-release-cl
-                    ctest -VV
+                    ctest --build-config Release -VV
